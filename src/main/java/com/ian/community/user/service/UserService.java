@@ -3,56 +3,110 @@ package com.ian.community.user.service;
 import com.ian.community.common.exception.CustomException;
 import com.ian.community.common.exception.ErrorCode;
 import com.ian.community.user.domain.User;
-import com.ian.community.user.dto.LoginRequest;
-import com.ian.community.user.dto.LoginResponse;
-import com.ian.community.user.dto.SignupRequest;
-import com.ian.community.user.dto.SignupResponse;
+import com.ian.community.user.dto.request.LoginRequest;
+import com.ian.community.user.dto.request.SignupRequest;
+import com.ian.community.user.dto.request.UserPasswordUpdateRequest;
+import com.ian.community.user.dto.request.UserUpdateRequest;
 import com.ian.community.user.repository.UserRepository;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
+@RequiredArgsConstructor
 public class UserService {
     private final UserRepository userRepository;
 
-    public UserService(UserRepository userRepository) {
-        this.userRepository = userRepository;
+    private User getActiveUser(Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+
+        if (user.isUserDeleted()) {
+            throw new CustomException(ErrorCode.USER_ALREADY_DELETED);
+        }
+
+        return user;
     }
 
-    public SignupResponse signup(SignupRequest request) {
-        validateSignup(request);
+    @Transactional
+    public void signup(SignupRequest request) {
+        if (userRepository.existsByEmail(request.getEmail())) {
+            throw new CustomException(ErrorCode.EMAIL_ALREADY_EXISTS);
+        }
 
-        User user = userRepository.save(
+        if (userRepository.existsByNickname(request.getNickname())) {
+            throw new CustomException(ErrorCode.NICKNAME_ALREADY_EXISTS);
+        }
+
+        if (!request.getPassword().equals(request.getPasswordConfirm())) {
+            throw new CustomException(ErrorCode.INVALID_PASSWORD);
+        }
+
+        User user = new User(
                 request.getEmail(),
                 request.getPassword(),
                 request.getNickname(),
-                request.getProfile()
+                request.getProfileImage()
         );
 
-        return new SignupResponse(user.getUserId());
+        userRepository.save(user);
     }
 
-    public LoginResponse login(LoginRequest request) {
+    @Transactional(readOnly = true)
+    public void login(LoginRequest request) {
         User user = userRepository.findByEmail(request.getEmail())
                 .orElseThrow(() -> new CustomException(ErrorCode.INVALID_LOGIN_REQUEST));
+
+        if (user.isUserDeleted()) {
+            throw new CustomException(ErrorCode.INVALID_LOGIN_REQUEST);
+        }
 
         if (!user.getPassword().equals(request.getPassword())) {
             throw new CustomException(ErrorCode.INVALID_LOGIN_REQUEST);
         }
-
-        return new LoginResponse(user.getUserId());
     }
 
-    private void validateSignup(SignupRequest request) {
-        if (!request.getPassword().equals(request.getPasswordConfirm())) {
-            throw new CustomException(ErrorCode.INVALID_SIGNUP_REQUEST);
-        }
+    @Transactional
+    public void updateNickname(Long userId, UserUpdateRequest request) {
+        User user = getActiveUser(userId);
 
-        if (userRepository.existsByEmail(request.getEmail())) {
-            throw new CustomException(ErrorCode.INVALID_SIGNUP_REQUEST);
+        if (user.getNickname().equals(request.getNickname())) {
+            throw new CustomException(ErrorCode.NO_CHANGES_DETECTED);
         }
 
         if (userRepository.existsByNickname(request.getNickname())) {
-            throw new CustomException(ErrorCode.INVALID_SIGNUP_REQUEST);
+            throw new CustomException(ErrorCode.NICKNAME_ALREADY_EXISTS);
         }
+
+        user.updateNickname(request.getNickname());
+    }
+
+    @Transactional
+    public void updateProfile(Long userId, UserUpdateRequest request) {
+        User user = getActiveUser(userId);
+
+        if (user.getProfileImage().equals(request.getProfileImage())) {
+            throw new CustomException(ErrorCode.NO_CHANGES_DETECTED);
+        }
+
+        user.updateProfile(request.getProfileImage());
+    }
+
+    @Transactional
+    public void updatePassword(Long userId, UserPasswordUpdateRequest request) {
+        User user = getActiveUser(userId);
+
+        if (!request.getPassword().equals(request.getPasswordConfirm())) {
+            throw new CustomException(ErrorCode.INVALID_PASSWORD);
+        }
+
+        user.updatePassword(request.getPassword());
+    }
+
+    @Transactional
+    public void deleteUser(Long userId) {
+        User user = getActiveUser(userId);
+
+        user.delete();
     }
 }

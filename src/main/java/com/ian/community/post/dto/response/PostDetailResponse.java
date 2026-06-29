@@ -1,20 +1,27 @@
-package com.ian.community.post.dto;
+package com.ian.community.post.dto.response;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.ian.community.post.domain.Post;
+import lombok.AllArgsConstructor;
 import lombok.Getter;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Getter
-public class PostResponse {
+@AllArgsConstructor
+public class PostDetailResponse {
     @JsonProperty("post_id")
     private Long postId;
 
     private String title;
 
-    @JsonProperty("author_name")
-    private String authorName;
+    private String content;
+
+    @JsonProperty("image_url")
+    private String imageUrl;
+
+    private String nickname;
 
     @JsonProperty("profile_image")
     private String profileImage;
@@ -28,25 +35,25 @@ public class PostResponse {
     @JsonProperty("view_count")
     private int viewCount;
 
+    private List<PostCommentResponse> comment;
+
     @JsonProperty("created_at")
     private LocalDateTime createdAt;
-
-    @JsonProperty("updated_at")
-    private LocalDateTime updatedAt;
 
     @JsonProperty("post_deleted")
     private boolean postDeleted;
 
-    public PostResponse(Post post) {
+    private PostDetailResponse(Post post) {
         this.postId = post.getPostId();
         this.title = post.getTitle();
-        this.authorName = post.getAuthorName();
-        this.profileImage = post.getProfileImage();
+        this.content = post.getContent();
         this.likeCount = post.getLikeCount();
-        this.commentCount = post.getCommentCount();
         this.viewCount = post.getViewCount();
+        this.commentCount = post.getCommentCount();
         this.createdAt = post.getCreatedAt();
-        this.updatedAt = post.getUpdatedAt();
-        this.postDeleted = post.isPostDeleted();
+    }
+
+    public static PostDetailResponse from(Post post) {
+        return new PostDetailResponse(post);
     }
 }

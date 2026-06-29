@@ -1,4 +1,4 @@
-package com.ian.community.user.dto;
+package com.ian.community.user.dto.request;
 
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;

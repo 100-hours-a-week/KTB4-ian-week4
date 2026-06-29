@@ -1,17 +1,21 @@
-package com.ian.community.post.dto;
+package com.ian.community.post.dto.response;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.ian.community.post.domain.Post;
+import lombok.AllArgsConstructor;
 import lombok.Getter;
 
 import java.time.LocalDateTime;
 
 @Getter
-public class PostListResponse {
+@AllArgsConstructor
+public class PostResponse { // 삭제 예정
     @JsonProperty("post_id")
     private Long postId;
 
     private String title;
+
+    private String content;
 
     @JsonProperty("author_name")
     private String authorName;
@@ -31,14 +35,18 @@ public class PostListResponse {
     @JsonProperty("created_at")
     private LocalDateTime createdAt;
 
-    public PostListResponse(Post post) {
+    @JsonProperty("updated_at")
+    private LocalDateTime updatedAt;
+
+    @JsonProperty("post_deleted")
+    private boolean postDeleted;
+
+    public PostResponse(Post post) {
         this.postId = post.getPostId();
         this.title = post.getTitle();
-        this.authorName = post.getAuthorName();
-        this.profileImage = post.getProfileImage();
+        this.content = post.getContent();
         this.likeCount = post.getLikeCount();
-        this.commentCount = post.getCommentCount();
         this.viewCount = post.getViewCount();
-        this.createdAt = post.getCreatedAt();
+        this.commentCount = post.getCommentCount();
     }
 }

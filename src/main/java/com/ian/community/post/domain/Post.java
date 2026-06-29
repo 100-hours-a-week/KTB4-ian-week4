@@ -1,45 +1,76 @@
 package com.ian.community.post.domain;
 
+import jakarta.persistence.*;
+
+import lombok.AccessLevel;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
+
+import com.ian.community.user.domain.User;
 
 import java.time.LocalDateTime;
+
 @Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@Entity
+@Table(name = "posts")
 public class Post {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "post_id")
     private Long postId;
 
-    private String title;
-    private String content;
-    private String authorName;
-    private String profileImage;
-    private String imageUrl;
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "user_id", nullable = false)
+    private User authorUser;
 
+    @Column(length = 26, nullable = false)
+    private String title;
+
+    @Column(nullable = false, columnDefinition = "TEXT")
+    private String content;
+
+    @Column(name = "like_count", nullable = false)
     private int likeCount;
-    private int commentCount;
+
+    @Column(name = "view_count", nullable = false)
     private int viewCount;
 
-    private final LocalDateTime createdAt;
+    @Column(name = "comment_count", nullable = false)
+    private int commentCount;
+
+    @Column(nullable = false)
+    private Boolean commentable;
+
+    @Column(name = "created_at", nullable = false)
+    private LocalDateTime createdAt;
+
+    @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
+
+    @Column(name = "post_deleted", nullable = false)
     private boolean postDeleted;
 
-    public Post(Long postId, String title, String content, String authorName, String profileImage, String imageUrl) {
-        this.postId = postId;
+    @Column(name = "deleted_at")
+    private LocalDateTime deletedAt;
+
+    public Post(User authorUser, String title, String content) {
+        this.authorUser = authorUser;
         this.title = title;
         this.content = content;
-        this.authorName = authorName;
-        this.profileImage = profileImage;
-        this.imageUrl = imageUrl;
         this.likeCount = 0;
-        this.commentCount = 0;
         this.viewCount = 0;
+        this.commentCount = 0;
+        this.commentable = true; // 기본적으로 사용자가 선택하지 않을 경우에 기본값
         this.createdAt = LocalDateTime.now();
-        this.updatedAt = null;
+        this.updatedAt = LocalDateTime.now(); // Null 처리를 하려고 했다가 null 허용하지 않고 안전하게 게시글 생성 시에도 시간 데이터 넣도록 했습니다.
         this.postDeleted = false;
+        this.deletedAt = null;
     }
 
-    public void update(String title, String content, String imageUrl) {
+    public void update(String title, String content) {
         this.title = title;
         this.content = content;
-        this.imageUrl = imageUrl;
         this.updatedAt = LocalDateTime.now();
     }
 
@@ -47,25 +78,24 @@ public class Post {
         this.likeCount++;
     }
 
-    public void downLikeCount() {
+    public void decreaseLikeCount() {
         this.likeCount--;
-    }
-
-    public void increaseCommentCount() {
-        this.commentCount++;
-    }
-
-    public void downCommentCount() {
-        this.commentCount--;
     }
 
     public void increaseViewCount() {
         this.viewCount++;
     }
 
+    public void increaseCommentCount() {
+        this.commentCount++;
+    }
+
+    public void decreaseCommentCount() {
+        this.commentCount--;
+    }
+
     public void delete() {
-        this.authorName = "알 수 없음";
-        this.profileImage = "https://image.kr/default-profile.jpg";
         this.postDeleted = true;
+        this.deletedAt = LocalDateTime.now();
     }
 }

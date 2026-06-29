@@ -3,11 +3,18 @@ package com.ian.community.common.exception;
 import org.springframework.http.HttpStatus;
 
 public enum ErrorCode {
+    // 회원
+    USER_NOT_FOUND(HttpStatus.NOT_FOUND, "user_not_found"),
+    USER_ALREADY_DELETED(HttpStatus.CONFLICT, "user_already_deleted"),
+
     // 회원가입
+    EMAIL_ALREADY_EXISTS(HttpStatus.CONFLICT, "email_already_exists"),
+    NICKNAME_ALREADY_EXISTS(HttpStatus.CONFLICT, "nickname_already_exists"),
     INVALID_SIGNUP_REQUEST(HttpStatus.BAD_REQUEST, "invalid_signup_request"),
 
     // 로그인
     INVALID_LOGIN_REQUEST(HttpStatus.BAD_REQUEST, "invalid_login_request"),
+    INVALID_PASSWORD(HttpStatus.BAD_REQUEST, "invalid_password"),
 
     // 게시물 작성/수정
     INVALID_POST_REQUEST(HttpStatus.BAD_REQUEST, "invalid_post_request"),

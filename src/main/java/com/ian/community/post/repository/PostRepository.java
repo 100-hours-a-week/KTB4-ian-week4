@@ -1,40 +1,21 @@
 package com.ian.community.post.repository;
 
-import com.ian.community.common.exception.CustomException;
-import com.ian.community.common.exception.ErrorCode;
 import com.ian.community.post.domain.Post;
+import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
-import java.util.*;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+
+import java.util.Optional;
 
 @Repository
-public class PostRepository {
-    private static final Map<Long, Post> posts = new HashMap<>();
-    private Long sequence = 1L;
+public interface PostRepository extends JpaRepository<Post, Long>  {
+    Optional<Post> findByPostIdAndPostDeletedFalse(Long postId); // 삭제되지 않은 게시글 단건 조회
 
-    public Post save(String title, String content, String authorName, String profileImage, String imageUrl) {
-        Post post = new Post(sequence, title, content, authorName, profileImage, imageUrl);
-        posts.put(sequence, post);
-        sequence++;
-        return post;
-    }
+    Page<Post> findAllByPostDeletedFalse(Pageable pageable); // 삭제되지 않은 게시글 목록 조회
 
-    public List<Post> findAll() {
-        return new ArrayList<>(posts.values());
-    }
+    Page<Post> findAllByAuthorUser_UserIdAndPostDeletedFalse(Long userId, Pageable pageable); // 특정 유저의 삭제되지 않은 게시글 목록 조회
 
-    public static Optional<Post> findById(Long postId) {
-        return Optional.ofNullable(posts.get(postId));
-    }
-
-    public void delete(Long postId) {
-        Post post = PostRepository.findById(postId)
-                .orElseThrow(() -> new CustomException(ErrorCode.POST_NOT_FOUND));
-
-        if (post.isPostDeleted()) {
-            throw new CustomException(ErrorCode.POST_ALREADY_DELETED);
-        }
-
-        post.delete();
-    }
+    boolean existsByPostIdAndPostDeletedFalse(Long postId); // 삭제되지 않은 게시글 존재 여부 확인
 }

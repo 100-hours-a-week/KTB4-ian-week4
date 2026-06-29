@@ -1,4 +1,4 @@
-package com.ian.community.user.dto;
+package com.ian.community.user.dto.request;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.validation.constraints.Email;
@@ -18,6 +18,7 @@ public class SignupRequest {
 
     @JsonProperty("password_confirm")
     @NotBlank(message = "비밀번호를 입력해주세요.")
+    @Size(min = 8, max = 20)
     private String passwordConfirm;
 
     @NotBlank(message = "닉네임을 입력해주세요.")
@@ -25,5 +26,5 @@ public class SignupRequest {
     private String nickname;
 
     @NotBlank(message = "프로필 사진을 추가해주세요.")
-    private String profile;
+    private String profileImage;
 }
