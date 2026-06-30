@@ -3,14 +3,13 @@ package com.ian.community.user.service;
 import com.ian.community.common.exception.CustomException;
 import com.ian.community.common.exception.ErrorCode;
 import com.ian.community.user.domain.User;
-import com.ian.community.user.dto.request.LoginRequest;
-import com.ian.community.user.dto.request.SignupRequest;
-import com.ian.community.user.dto.request.UserPasswordUpdateRequest;
-import com.ian.community.user.dto.request.UserUpdateRequest;
+import com.ian.community.user.dto.request.*;
 import com.ian.community.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.Objects;
 
 @Service
 @RequiredArgsConstructor
@@ -38,7 +37,7 @@ public class UserService {
             throw new CustomException(ErrorCode.NICKNAME_ALREADY_EXISTS);
         }
 
-        if (!request.getPassword().equals(request.getPasswordConfirm())) {
+        if (!Objects.equals(request.getPassword(), request.getPasswordConfirm())) {
             throw new CustomException(ErrorCode.INVALID_PASSWORD);
         }
 
@@ -67,7 +66,7 @@ public class UserService {
     }
 
     @Transactional
-    public void updateNickname(Long userId, UserUpdateRequest request) {
+    public void updateNickname(Long userId, UserNicknameUpdateRequest request) {
         User user = getActiveUser(userId);
 
         if (user.getNickname().equals(request.getNickname())) {
@@ -82,7 +81,7 @@ public class UserService {
     }
 
     @Transactional
-    public void updateProfile(Long userId, UserUpdateRequest request) {
+    public void updateProfile(Long userId, UserProfileImageUpdateRequest request) {
         User user = getActiveUser(userId);
 
         if (user.getProfileImage().equals(request.getProfileImage())) {

@@ -17,7 +17,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/posts")
+@RequestMapping("/api/posts")
 public class PostController {
     private final PostService postService;
     private final CommentService commentService;
@@ -26,7 +26,8 @@ public class PostController {
         this.postService = postService;
         this.commentService = commentService;
     }
-    @PostMapping
+
+    @PostMapping("/{userId}")
     public ResponseEntity<Long> createPost(
             @PathVariable Long userId,
             @RequestBody PostCreateRequest request
@@ -52,7 +53,7 @@ public class PostController {
     }
 
     // 게시물 상세 조회
-    @GetMapping("{post_id}")
+    @GetMapping("{postId}")
     public ResponseEntity<PostDetailResponse> getPostDetail(
             @PathVariable Long userId,
             @PathVariable Long postId
@@ -63,7 +64,7 @@ public class PostController {
     }
 
     // 게시물 수정
-    @PatchMapping("{post_id}")
+    @PatchMapping("{postId}")
     public ResponseEntity<Void> updatePost(
             @PathVariable Long userId,
             @PathVariable Long postId,

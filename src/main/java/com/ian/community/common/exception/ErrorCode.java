@@ -12,6 +12,7 @@ public enum ErrorCode {
     NICKNAME_ALREADY_EXISTS(HttpStatus.CONFLICT, "nickname_already_exists"),
     INVALID_SIGNUP_REQUEST(HttpStatus.BAD_REQUEST, "invalid_signup_request"),
 
+
     // 로그인
     INVALID_LOGIN_REQUEST(HttpStatus.BAD_REQUEST, "invalid_login_request"),
     INVALID_PASSWORD(HttpStatus.BAD_REQUEST, "invalid_password"),

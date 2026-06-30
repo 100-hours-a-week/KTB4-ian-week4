@@ -1,9 +1,6 @@
 package com.ian.community.user.controller;
 
-import com.ian.community.user.dto.request.LoginRequest;
-import com.ian.community.user.dto.request.SignupRequest;
-import com.ian.community.user.dto.request.UserPasswordUpdateRequest;
-import com.ian.community.user.dto.request.UserUpdateRequest;
+import com.ian.community.user.dto.request.*;
 import com.ian.community.user.service.UserService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -12,7 +9,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/users")
+@RequestMapping("/api/users")
 @RequiredArgsConstructor
 public class UserController {
     private final UserService userService;
@@ -31,17 +28,17 @@ public class UserController {
         return ResponseEntity.ok().build();
     }
 
-    @PatchMapping("/{user_id}/nickname")
+    @PatchMapping("/{userId}/nickname")
     public ResponseEntity<Void> updateNickname(
             @PathVariable Long userId,
-            @Valid @RequestBody UserUpdateRequest request
+            @Valid @RequestBody UserNicknameUpdateRequest request
     ) {
         userService.updateNickname(userId, request);
 
         return ResponseEntity.noContent().build();
     }
 
-    @PatchMapping("/{user_id}/password")
+    @PatchMapping("/{userId}/password")
     public ResponseEntity<Void> updatePassword(
             @PathVariable Long userId,
             @Valid @RequestBody UserPasswordUpdateRequest request
@@ -51,10 +48,10 @@ public class UserController {
         return ResponseEntity.noContent().build();
     }
 
-    @PatchMapping("/{user_id}/profile-image")
+    @PatchMapping("/{userId}/profile-image")
     public ResponseEntity<Void> updateProfile(
             @PathVariable Long userId,
-            @Valid @RequestBody UserUpdateRequest request
+            @Valid @RequestBody UserProfileImageUpdateRequest request
     ) {
         userService.updateProfile(userId, request);
 
@@ -62,7 +59,7 @@ public class UserController {
     }
 
 
-    @DeleteMapping("/{user_id}/delete")
+    @DeleteMapping("/{userId}/delete")
     public ResponseEntity<Void> deleteUser(
             @PathVariable Long userId
     ) {
