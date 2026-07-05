@@ -43,17 +43,26 @@ public class PostDetailResponse {
     @JsonProperty("post_deleted")
     private boolean postDeleted;
 
+    private boolean liked;
+
     private PostDetailResponse(Post post) {
         this.postId = post.getPostId();
         this.title = post.getTitle();
         this.content = post.getContent();
+        this.nickname = post.getAuthorUser().getNickname();
+        this.profileImage = post.getAuthorUser().getProfileImage();
         this.likeCount = post.getLikeCount();
         this.viewCount = post.getViewCount();
         this.commentCount = post.getCommentCount();
         this.createdAt = post.getCreatedAt();
+        this.postDeleted = post.isPostDeleted();
     }
 
-    public static PostDetailResponse from(Post post) {
-        return new PostDetailResponse(post);
+    public static PostDetailResponse from(Post post, List<PostCommentResponse> comments, String imageUrl, boolean liked) {
+        PostDetailResponse response = new PostDetailResponse(post);
+        response.comment = comments;
+        response.imageUrl = imageUrl;
+        response.liked = liked;
+        return response;
     }
 }

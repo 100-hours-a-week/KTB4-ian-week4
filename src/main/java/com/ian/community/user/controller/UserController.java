@@ -1,6 +1,7 @@
 package com.ian.community.user.controller;
 
 import com.ian.community.user.dto.request.*;
+import com.ian.community.user.dto.response.UserResponse;
 import com.ian.community.user.service.UserService;
 import jakarta.servlet.http.HttpSession;
 import jakarta.validation.Valid;
@@ -38,6 +39,13 @@ public class UserController {
         userService.login(request);
 
         return ResponseEntity.ok().build();
+    }
+
+    @GetMapping("/{userId}")
+    public ResponseEntity<UserResponse> getUser(
+            @PathVariable Long userId
+    ) {
+        return ResponseEntity.ok(userService.getUser(userId));
     }
 
     @PatchMapping("/{userId}/nickname")

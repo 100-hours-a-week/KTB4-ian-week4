@@ -4,6 +4,7 @@ import com.ian.community.common.exception.CustomException;
 import com.ian.community.common.exception.ErrorCode;
 import com.ian.community.user.domain.User;
 import com.ian.community.user.dto.request.*;
+import com.ian.community.user.dto.response.UserResponse;
 import com.ian.community.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -49,6 +50,18 @@ public class UserService {
         );
 
         userRepository.save(user);
+    }
+
+    @Transactional(readOnly = true)
+    public UserResponse getUser(Long userId) {
+        User user = getActiveUser(userId);
+
+        return new UserResponse(
+                user.getUserId(),
+                user.getEmail(),
+                user.getNickname(),
+                user.getProfileImage()
+        );
     }
 
     @Transactional(readOnly = true)

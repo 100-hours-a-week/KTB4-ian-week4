@@ -50,6 +50,13 @@ public class PostLikeService {
         return postLikeRepository.countByAuthorPost(post);
     }
 
+    public boolean isLiked(Long userId, Long postId) {
+        User user = getActiveUser(userId);
+        Post post = getActivePost(postId);
+
+        return postLikeRepository.findByAuthorUserAndAuthorPost(user, post).isPresent();
+    }
+
     private User getActiveUser(Long userId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));

@@ -41,12 +41,25 @@ public class PostResponse { // 삭제 예정
     @JsonProperty("post_deleted")
     private boolean postDeleted;
 
+    @JsonProperty("image_url")
+    private String imageUrl;
+
     public PostResponse(Post post) {
+        this(post, null);
+    }
+
+    public PostResponse(Post post, String imageUrl) {
         this.postId = post.getPostId();
         this.title = post.getTitle();
         this.content = post.getContent();
+        this.authorName = post.getAuthorUser().getNickname();
+        this.profileImage = post.getAuthorUser().getProfileImage();
         this.likeCount = post.getLikeCount();
         this.viewCount = post.getViewCount();
         this.commentCount = post.getCommentCount();
+        this.createdAt = post.getCreatedAt();
+        this.updatedAt = post.getUpdatedAt();
+        this.postDeleted = post.isPostDeleted();
+        this.imageUrl = imageUrl;
     }
 }

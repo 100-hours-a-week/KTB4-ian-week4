@@ -1,6 +1,7 @@
 package com.ian.community.post.dto.response;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.ian.community.post.domain.PostComment;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 
@@ -27,4 +28,16 @@ public class PostCommentResponse {
 
     @JsonProperty("created_at")
     private LocalDateTime createdAt;
+
+    public static PostCommentResponse from(PostComment comment) {
+        return new PostCommentResponse(
+                comment.getCommentId(),
+                comment.getAuthorUser().getUserId(),
+                comment.getAuthorPost().getPostId(),
+                comment.getComment(),
+                comment.getAuthorUser().getNickname(),
+                comment.getAuthorUser().getProfileImage(),
+                comment.getCreatedAt()
+        );
+    }
 }

@@ -47,6 +47,12 @@ public class PostService {
         return postRepository.findAllByPostDeletedFalse(pageable);
     }
 
+    public String getPostImageUrl(Post post) {
+        return postImageRepository.findByAuthorPost(post)
+                .map(PostImage::getImageUrl)
+                .orElse(null);
+    }
+
     public Page<Post> getPostsByUser(Long userId, Pageable pageable) {
         getActiveUser(userId);
 
@@ -100,9 +106,8 @@ public class PostService {
 
         post.delete();
 
-        if (postImageRepository.existsByAuthorPost(post)) {
-            postImageRepository.deleteByAuthorPost(post);
-        }
+        postImageRepository.findByAuthorPost(post)
+                .ifPresent(postImageRepository::delete);
     }
 
     private void increaseViewCountIfAllowed(User user, Post post) {
