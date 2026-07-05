@@ -53,7 +53,7 @@ public class PostController {
     }
 
     // 게시물 상세 조회
-    @GetMapping("{postId}")
+    @GetMapping("/{postId}")
     public ResponseEntity<PostDetailResponse> getPostDetail(
             @PathVariable Long userId,
             @PathVariable Long postId
@@ -64,7 +64,7 @@ public class PostController {
     }
 
     // 게시물 수정
-    @PatchMapping("{postId}")
+    @PatchMapping("/{postId}")
     public ResponseEntity<Void> updatePost(
             @PathVariable Long userId,
             @PathVariable Long postId,
@@ -82,7 +82,7 @@ public class PostController {
     }
 
     // 게시물 삭제
-    @DeleteMapping("{postId}")
+    @DeleteMapping("/{postId}")
     public ResponseEntity<Void> deletePost(
             @PathVariable Long userId,
             @PathVariable Long postId

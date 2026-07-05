@@ -2,11 +2,14 @@ package com.ian.community.user.controller;
 
 import com.ian.community.user.dto.request.*;
 import com.ian.community.user.service.UserService;
+import jakarta.servlet.http.HttpSession;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 @RestController
 @RequestMapping("/api/users")
@@ -14,15 +17,24 @@ import org.springframework.web.bind.annotation.*;
 public class UserController {
     private final UserService userService;
 
-    @PostMapping("/signup")
-    public ResponseEntity<Void> signup(@Valid @RequestBody SignupRequest request) {
+    @PostMapping(
+            value = "/signup",
+            consumes = MediaType.MULTIPART_FORM_DATA_VALUE
+    )
+    public ResponseEntity<Void> signup(
+            @RequestPart("request") SignupRequest request,
+            @RequestPart(value = "image", required = false) MultipartFile image
+    ) {
         userService.signup(request);
 
         return ResponseEntity.status(HttpStatus.CREATED).build();
     }
 
     @PostMapping("/login")
-    public ResponseEntity<Void> login(@Valid @RequestBody LoginRequest request) {
+    public ResponseEntity<Void> login(
+            @Valid @RequestBody LoginRequest request,
+            HttpSession session
+    ) {
         userService.login(request);
 
         return ResponseEntity.ok().build();
