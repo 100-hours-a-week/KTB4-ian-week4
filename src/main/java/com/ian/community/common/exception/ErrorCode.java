@@ -32,8 +32,21 @@ public enum ErrorCode {
     COMMENT_NOT_FOUND(HttpStatus.NOT_FOUND, "comment_not_found"),
     COMMENT_ALREADY_DELETED(HttpStatus.CONFLICT, "comment_already_deleted"),
 
+    // 인증 인가
+    UNAUTHORIZED(HttpStatus.UNAUTHORIZED, "unauthorized"), // 로그인 안 했을 때
+    FORBIDDEN(HttpStatus.FORBIDDEN, "forbidden"), // 로그인은 했지만 권한 없을 때
+
+    INVALID_ACCESS_TOKEN(HttpStatus.UNAUTHORIZED, "invalid_access_token"),
+    EXPIRED_ACCESS_TOKEN(HttpStatus.UNAUTHORIZED, "expired_access_token"),
+
+    INVALID_REFRESH_TOKEN(HttpStatus.UNAUTHORIZED, "invalid_refresh_token"),
+    EXPIRED_REFRESH_TOKEN(HttpStatus.UNAUTHORIZED, "expired_refresh_token"),
+    REFRESH_TOKEN_NOT_FOUND(HttpStatus.UNAUTHORIZED, "refresh_token_not_found"),
+    REFRESH_TOKEN_REUSED(HttpStatus.UNAUTHORIZED, "refresh_token_reused"),
+    REFRESH_TOKEN_USER_MISMATCH(HttpStatus.UNAUTHORIZED, "refresh_token_user_mismatch"),
+    REFRESH_TOKEN_FAMILY_MISMATCH(HttpStatus.UNAUTHORIZED, "refresh_token_family_mismatch"),
+
     // 공통
-    UNAUTHORIZED(HttpStatus.UNAUTHORIZED, "unauthorized"),
     IMAGE_TOO_LARGE(HttpStatus.PAYLOAD_TOO_LARGE, "image_too_large"),
     UNSUPPORTED_IMAGE_TYPE(HttpStatus.UNSUPPORTED_MEDIA_TYPE, "unsupported_image_type"),
     TOO_MANY_REQUESTS(HttpStatus.TOO_MANY_REQUESTS, "too_many_requests"),

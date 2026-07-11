@@ -7,6 +7,7 @@ import com.ian.community.user.dto.request.*;
 import com.ian.community.user.dto.response.UserResponse;
 import com.ian.community.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -16,6 +17,7 @@ import java.util.Objects;
 @RequiredArgsConstructor
 public class UserService {
     private final UserRepository userRepository;
+    private final PasswordEncoder passwordEncoder;
 
     private User getActiveUser(Long userId) {
         User user = userRepository.findById(userId)
@@ -42,9 +44,12 @@ public class UserService {
             throw new CustomException(ErrorCode.INVALID_PASSWORD);
         }
 
+        String encodedPassword =
+                passwordEncoder.encode(request.getPassword());
+
         User user = new User(
                 request.getEmail(),
-                request.getPassword(),
+                encodedPassword,
                 request.getNickname(),
                 request.getProfileImage()
         );
@@ -65,24 +70,38 @@ public class UserService {
     }
 
     @Transactional(readOnly = true)
-    public void login(LoginRequest request) {
+    public User login(LoginRequest request) {
         User user = userRepository.findByEmail(request.getEmail())
-                .orElseThrow(() -> new CustomException(ErrorCode.INVALID_LOGIN_REQUEST));
+                .orElseThrow(() ->
+                        new CustomException(
+                                ErrorCode.INVALID_LOGIN_REQUEST
+                        )
+                );
 
         if (user.isUserDeleted()) {
-            throw new CustomException(ErrorCode.INVALID_LOGIN_REQUEST);
+            throw new CustomException(
+                    ErrorCode.INVALID_LOGIN_REQUEST
+            );
         }
 
-        if (!user.getPassword().equals(request.getPassword())) {
-            throw new CustomException(ErrorCode.INVALID_LOGIN_REQUEST);
+        if (!passwordEncoder.matches(
+                request.getPassword(),
+                user.getPassword()
+        )) {
+            throw new CustomException(
+                    ErrorCode.INVALID_LOGIN_REQUEST
+            );
         }
+
+        return user;
     }
 
     @Transactional
     public void updateNickname(Long userId, UserNicknameUpdateRequest request) {
         User user = getActiveUser(userId);
 
-        if (user.getNickname().equals(request.getNickname())) {
+        if (user.getNickname()
+                .equals(request.getNickname())) {
             throw new CustomException(ErrorCode.NO_CHANGES_DETECTED);
         }
 
@@ -94,10 +113,14 @@ public class UserService {
     }
 
     @Transactional
-    public void updateProfile(Long userId, UserProfileImageUpdateRequest request) {
+    public void updateProfile(
+            Long userId,
+            UserProfileImageUpdateRequest request) {
+
         User user = getActiveUser(userId);
 
-        if (user.getProfileImage().equals(request.getProfileImage())) {
+        if (user.getProfileImage()
+                .equals(request.getProfileImage())) {
             throw new CustomException(ErrorCode.NO_CHANGES_DETECTED);
         }
 
@@ -105,10 +128,14 @@ public class UserService {
     }
 
     @Transactional
-    public void updatePassword(Long userId, UserPasswordUpdateRequest request) {
+    public void updatePassword(
+            Long userId,
+            UserPasswordUpdateRequest request) {
+
         User user = getActiveUser(userId);
 
-        if (!request.getPassword().equals(request.getPasswordConfirm())) {
+        if (!request.getPassword()
+                .equals(request.getPasswordConfirm())) {
             throw new CustomException(ErrorCode.INVALID_PASSWORD);
         }
 

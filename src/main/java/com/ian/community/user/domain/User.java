@@ -21,7 +21,7 @@ public class User {
     @Column(length = 256)
     private String email;
 
-    @Column(length = 64)
+    @Column(length = 100)
     private String password;
 
     @Column(length = 10, nullable = false)
@@ -39,7 +39,7 @@ public class User {
     @Column(name = "nickname_updated_at")
     private LocalDateTime nicknameUpdatedAt;
 
-    @Column(name = "profilae_updated_at")
+    @Column(name = "profile_updated_at")
     private LocalDateTime profileUpdatedAt;
 
     @Column(name = "user_deleted", nullable = false)

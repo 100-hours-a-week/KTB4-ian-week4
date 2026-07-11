@@ -13,6 +13,7 @@ import com.ian.community.post.dto.response.PostResponse;
 import com.ian.community.post.service.CommentService;
 import com.ian.community.post.service.PostLikeService;
 import com.ian.community.post.service.PostService;
+import jakarta.validation.Valid;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
@@ -37,7 +38,7 @@ public class PostController {
     @PostMapping("/{userId}")
     public ResponseEntity<Long> createPost(
             @PathVariable Long userId,
-            @RequestBody PostCreateRequest request
+            @Valid  @RequestBody PostCreateRequest request
     ) {
         Long postId = postService.createPost(
                 userId,
@@ -85,7 +86,7 @@ public class PostController {
     public ResponseEntity<Void> updatePost(
             @PathVariable Long postId,
             @RequestParam(defaultValue = "1") Long userId,
-            @RequestBody PostUpdateRequest request
+            @Valid @RequestBody PostUpdateRequest request
     ) {
         postService.updatePost(
                 userId,
@@ -126,7 +127,7 @@ public class PostController {
     public ResponseEntity<Long> createComment(
             @PathVariable Long userId,
             @PathVariable Long postId,
-            @RequestBody PostCommentCreateRequest request
+            @Valid @RequestBody PostCommentCreateRequest request
     ) {
         Long commentId = commentService.createComment(
                 userId,
@@ -145,7 +146,7 @@ public class PostController {
             @PathVariable Long userId,
             @PathVariable Long postId,
             @PathVariable Long commentId,
-            @RequestBody PostCommentUpdateRequest request
+            @Valid @RequestBody PostCommentUpdateRequest request
     ) {
         commentService.updateComment(
                 userId,

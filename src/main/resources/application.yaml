@@ -23,18 +23,28 @@ spring:
 
   # JPA 설정
   jpa:
-    database-platform: org.hibernate.dialect.H2Dialect
+    # database-platform: org.hibernate.dialect.H2Dialect
     hibernate:
       ddl-auto: create
     properties:
       hibernate:
-        dialect: org.hibernate.dialect.H2Dialect
+        # dialect: org.hibernate.dialect.H2Dialect
         format_sql: true   # 쿼리 로그 포맷 - 정렬
         show_sql: true     # 쿼리 로그 출력
 
-  mvc:
-    pathmatch:
-      matching-strategy: ant_path_matcher
+  security:
+    user:
+      name: user
+      password: 1029
 
-# 블로그 링크
-# https://congsong.tistory.com/46
+app:
+  frontend-origin: http://localhost:3000
+  cookie:
+    secure: false
+    same-site: Lax
+
+jwt:
+  issuer: ian-community
+  secret: ${JWT_SECRET}
+  access-token-expiration-seconds: 600        # 엑시스 토큰 만료 시간 설정 - 10분 설정
+  refresh-token-expiration-seconds: 604800    # 리프레쉬 토큰 만료 시간 설정 - 7일 설정

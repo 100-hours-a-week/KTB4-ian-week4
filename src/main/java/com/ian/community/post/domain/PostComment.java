@@ -35,7 +35,7 @@ public class PostComment {
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
 
-    @Column(name = "comment_deletd",  nullable = false)
+    @Column(name = "comment_deleted",  nullable = false)
     private Boolean commentDeleted;
 
     @Column(name = "deleted_at")
