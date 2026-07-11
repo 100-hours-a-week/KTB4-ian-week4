@@ -1,5 +1,6 @@
 package com.ian.community.config;
 
+import com.ian.community.security.csrf.SignedDoubleSubmitCsrfFilter;
 import com.ian.community.security.handler.CustomAccessDeniedHandler;
 import com.ian.community.security.handler.CustomAuthenticationEntryPoint;
 import com.ian.community.security.jwt.JwtAuthenticationFilter;
@@ -11,28 +12,25 @@ import org.springframework.security.config.annotation.web.configurers.AbstractHt
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
-import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 
 @Configuration
 public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
+    private final SignedDoubleSubmitCsrfFilter csrfFilter;
     private final CustomAuthenticationEntryPoint customAuthenticationEntryPoint;
     private final CustomAccessDeniedHandler customAccessDeniedHandler;
 
     public SecurityConfig(
             JwtAuthenticationFilter jwtAuthenticationFilter,
+            SignedDoubleSubmitCsrfFilter csrfFilter,
             CustomAuthenticationEntryPoint customAuthenticationEntryPoint,
             CustomAccessDeniedHandler customAccessDeniedHandler
     ) {
-        this.jwtAuthenticationFilter =
-                jwtAuthenticationFilter;
-
-        this.customAuthenticationEntryPoint =
-                customAuthenticationEntryPoint;
-
-        this.customAccessDeniedHandler =
-                customAccessDeniedHandler;
+        this.jwtAuthenticationFilter = jwtAuthenticationFilter;
+        this.csrfFilter = csrfFilter;
+        this.customAuthenticationEntryPoint = customAuthenticationEntryPoint;
+        this.customAccessDeniedHandler = customAccessDeniedHandler;
     }
 
     @Bean
@@ -41,34 +39,19 @@ public class SecurityConfig {
     ) throws Exception {
 
         http
-                .formLogin(
-                        AbstractHttpConfigurer::disable
-                )
-
-                .httpBasic(
-                        AbstractHttpConfigurer::disable
-                )
-
-                .cors(
-                        Customizer.withDefaults()
-                )
-
-                .csrf(csrf ->
-                        csrf.csrfTokenRepository(
-                                CookieCsrfTokenRepository
-                                        .withHttpOnlyFalse()
-                        )
-                )
-
+                .formLogin(AbstractHttpConfigurer::disable)
+                .httpBasic(AbstractHttpConfigurer::disable)
+                .cors(Customizer.withDefaults())
+                .csrf(AbstractHttpConfigurer::disable)
                 .sessionManagement(session ->
                         session.sessionCreationPolicy(
                                 SessionCreationPolicy.STATELESS
                         )
                 )
-
                 .authorizeHttpRequests(authorize ->
                         authorize
                                 .requestMatchers(
+                                        "/api/csrf",
                                         "/api/users/login",
                                         "/api/users/signup",
                                         "/api/users/refresh",
@@ -80,15 +63,11 @@ public class SecurityConfig {
                                         "/images/**",
                                         "/favicon.ico"
                                 ).permitAll()
-
-                                .requestMatchers(
-                                        "/api/admin/**"
-                                ).hasRole("ADMIN")
-
+                                .requestMatchers("/api/admin/**")
+                                .hasRole("ADMIN")
                                 .anyRequest()
                                 .authenticated()
                 )
-
                 .exceptionHandling(exception ->
                         exception
                                 .authenticationEntryPoint(
@@ -98,13 +77,15 @@ public class SecurityConfig {
                                         customAccessDeniedHandler
                                 )
                 )
-
                 .headers(headers ->
                         headers.frameOptions(frame ->
                                 frame.sameOrigin()
                         )
                 )
-
+                .addFilterBefore(
+                        csrfFilter,
+                        JwtAuthenticationFilter.class
+                )
                 .addFilterBefore(
                         jwtAuthenticationFilter,
                         UsernamePasswordAuthenticationFilter.class
