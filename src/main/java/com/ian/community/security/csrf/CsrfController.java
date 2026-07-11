@@ -30,12 +30,12 @@ public class CsrfController {
     @GetMapping
     public ResponseEntity<Void> issue(HttpServletRequest request) {
         String existingBinding = bindingResolver.resolve(request).orElse(null);
-        boolean needsPreAuthBinding = existingBinding == null;
-        String rawPreAuthBinding = needsPreAuthBinding
+        boolean needsSessionBinding = existingBinding == null;
+        String rawSessionBinding = needsSessionBinding
                 ? UUID.randomUUID().toString()
                 : null;
-        String binding = needsPreAuthBinding
-                ? "preauth:" + rawPreAuthBinding
+        String binding = needsSessionBinding
+                ? "session:" + rawSessionBinding
                 : existingBinding;
 
         CsrfTokenPair pair = csrfService.issue(binding);
@@ -45,11 +45,11 @@ public class CsrfController {
                         cookieProvider.createTokenCookie(pair.token()).toString()
                 );
 
-        if (needsPreAuthBinding) {
+        if (needsSessionBinding) {
             response.header(
                     HttpHeaders.SET_COOKIE,
                     cookieProvider
-                            .createPreAuthBindingCookie(rawPreAuthBinding)
+                            .createPreAuthBindingCookie(rawSessionBinding)
                             .toString()
             );
         }
