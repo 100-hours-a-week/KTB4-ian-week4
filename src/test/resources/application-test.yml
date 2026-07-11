@@ -1,26 +1,13 @@
 spring:
-  sql:
-    init:
-      mode: always # 항상 init data 생성
-  jpa:
-    defer-datasource-initialization: true # 항상 init data 생성
-    database-platform: org.hibernate.dialect.MySQL5Dialect
-    database: h2
-    show-sql: true
-    open-in-view: false
-    properties:
-      hibernate:
-        show_sql: true
-        format_sql: true
-    generate-ddl: true
   datasource:
     driver-class-name: org.h2.Driver
-    url: jdbc:h2:mem:testdb;MODE=MySQL; # In-Memory mode: 로컬에 데이터를 저장하지 않고 메모리 상에서만 데이터가 저장된다.
-    username: SA
+    url: jdbc:h2:mem:testdb
+    username: sa
     password:
-  h2:
-    console:
-      enabled: true
-      path: /h2-console
-logging.level:
-  org.hibernate.SQL: debug # 로그의 ?에 어떤 값이 들어갔는지 확인할 수 있다.
+
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+
+app:
+  frontend-origin: http://127.0.0.1:5500

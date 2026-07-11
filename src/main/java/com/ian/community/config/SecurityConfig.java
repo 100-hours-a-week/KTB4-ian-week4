@@ -11,7 +11,6 @@ import org.springframework.security.config.annotation.web.configurers.AbstractHt
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
-import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 
 @Configuration
 public class SecurityConfig {
@@ -54,10 +53,7 @@ public class SecurityConfig {
                 )
 
                 .csrf(csrf ->
-                        csrf.csrfTokenRepository(
-                                CookieCsrfTokenRepository
-                                        .withHttpOnlyFalse()
-                        )
+                        csrf.spa()
                 )
 
                 .sessionManagement(session ->
@@ -69,6 +65,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(authorize ->
                         authorize
                                 .requestMatchers(
+                                        "/api/csrf",
                                         "/api/users/login",
                                         "/api/users/signup",
                                         "/api/users/refresh",
