@@ -36,6 +36,7 @@ public class UserTest {
 
         user.updatePassword("password");
 
+        // 비밀번호 검증 시에 mathes를 통한 검증하기
         assertEquals("password", user.getPassword());
         assertNotNull(user.getPasswordUpdatedAt());
     }
@@ -67,6 +68,7 @@ public class UserTest {
         );
 
         // 삭제 시간은 기존에 null이기에 실제로도 null을 유지하는지 검증합니다.
+        // 닉네임, 이메일, 비밀번호 null 되었는지 확인하는 코드 작성하기
         assertFalse(user.isUserDeleted());
         assertNull(user.getDeletedAt());
 

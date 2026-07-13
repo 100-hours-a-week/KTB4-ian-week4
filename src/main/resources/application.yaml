@@ -40,7 +40,7 @@ spring:
 app:
   frontend-origin: http://127.0.0.1:5500
   cookie:
-    secure: false
+    secure: false      # 서비스 시에는 true로 설정, 테스트 진행 시에만 false
     same-site: Lax
 
 jwt:

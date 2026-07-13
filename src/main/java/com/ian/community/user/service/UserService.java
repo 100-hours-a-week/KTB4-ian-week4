@@ -132,6 +132,9 @@ public class UserService {
             Long userId,
             UserPasswordUpdateRequest request) {
 
+        String encodedPassword =
+                passwordEncoder.encode(request.getPassword());
+
         User user = getActiveUser(userId);
 
         if (!request.getPassword()
@@ -139,7 +142,7 @@ public class UserService {
             throw new CustomException(ErrorCode.INVALID_PASSWORD);
         }
 
-        user.updatePassword(request.getPassword());
+        user.updatePassword(encodedPassword);
     }
 
     @Transactional

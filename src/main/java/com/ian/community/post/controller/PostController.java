@@ -13,11 +13,13 @@ import com.ian.community.post.dto.response.PostResponse;
 import com.ian.community.post.service.CommentService;
 import com.ian.community.post.service.PostLikeService;
 import com.ian.community.post.service.PostService;
+import com.ian.community.security.principal.AuthenticatedUser;
 import jakarta.validation.Valid;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -37,11 +39,11 @@ public class PostController {
 
     @PostMapping("/{userId}")
     public ResponseEntity<Long> createPost(
-            @PathVariable Long userId,
+            @AuthenticationPrincipal AuthenticatedUser authenticatedUser,
             @Valid  @RequestBody PostCreateRequest request
     ) {
         Long postId = postService.createPost(
-                userId,
+                authenticatedUser.getUserId(),
                 request.getTitle(),
                 request.getContent(),
                 request.getImageUrl()
@@ -63,10 +65,10 @@ public class PostController {
     // 게시물 상세 조회
     @GetMapping("/{postId}")
     public ResponseEntity<PostDetailResponse> getPostDetail(
-            @PathVariable Long postId,
-            @RequestParam(defaultValue = "1") Long userId
+            @AuthenticationPrincipal AuthenticatedUser authenticatedUser,
+            @PathVariable Long postId
     ) {
-        Post post = postService.getPostDetail(userId, postId);
+        Post post = postService.getPostDetail(authenticatedUser.getUserId(), postId);
 
         List<PostCommentResponse> comments = commentService
                 .getComments(postId, Pageable.unpaged())
@@ -77,19 +79,19 @@ public class PostController {
                 post,
                 comments,
                 postService.getPostImageUrl(post),
-                postLikeService.isLiked(userId, postId)
+                postLikeService.isLiked(authenticatedUser.getUserId(), postId)
         ));
     }
 
     // 게시물 수정
     @PatchMapping("/{postId}")
     public ResponseEntity<Void> updatePost(
+            @AuthenticationPrincipal AuthenticatedUser authenticatedUser,
             @PathVariable Long postId,
-            @RequestParam(defaultValue = "1") Long userId,
             @Valid @RequestBody PostUpdateRequest request
     ) {
         postService.updatePost(
-                userId,
+                authenticatedUser.getUserId(),
                 postId,
                 request.getTitle(),
                 request.getContent(),
