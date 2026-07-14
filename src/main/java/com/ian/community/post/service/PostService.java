@@ -29,10 +29,10 @@ public class PostService {
     private final PostViewRepository postViewRepository;
 
     @Transactional
-    public Long createPost(Long userId, String title, String content, String imageUrl) {
+    public Long createPost(Long userId, String content, String imageUrl) {
         User user = getActiveUser(userId);
 
-        Post post = new Post(user, title, content);
+        Post post = new Post(user, content);
         Post savedPost = postRepository.save(post);
 
         if (imageUrl != null && !imageUrl.isBlank()) {
@@ -79,14 +79,13 @@ public class PostService {
 
         validatePostOwner(post, user);
 
-        boolean sameTitle = post.getTitle().equals(title);
         boolean sameContent = post.getContent().equals(content);
 
-        if (sameTitle && sameContent) {
+        if (sameContent) {
             throw new CustomException(ErrorCode.NO_CHANGES_DETECTED);
         }
 
-        post.update(title, content);
+        post.update(content);
 
         if (imageUrl != null && !imageUrl.isBlank()) {
             updatePostImage(post, imageUrl);

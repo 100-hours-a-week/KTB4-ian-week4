@@ -9,11 +9,9 @@ import java.time.LocalDateTime;
 
 @Getter
 @AllArgsConstructor
-public class PostResponse { // 삭제 예정
+public class PostResponse {
     @JsonProperty("post_id")
     private Long postId;
-
-    private String title;
 
     private String content;
 
@@ -50,7 +48,6 @@ public class PostResponse { // 삭제 예정
 
     public PostResponse(Post post, String imageUrl) {
         this.postId = post.getPostId();
-        this.title = post.getTitle();
         this.content = post.getContent();
         this.authorName = post.getAuthorUser().getNickname();
         this.profileImage = post.getAuthorUser().getProfileImage();

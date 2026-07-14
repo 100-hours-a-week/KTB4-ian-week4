@@ -31,7 +31,10 @@ public class PostController {
     private final CommentService commentService;
     private final PostLikeService postLikeService;
 
-    public PostController(PostService postService, CommentService commentService,  PostLikeService postLikeService) {
+    public PostController(
+            PostService postService,
+            CommentService commentService,
+            PostLikeService postLikeService) {
         this.postService = postService;
         this.commentService = commentService;
         this.postLikeService = postLikeService;
@@ -44,7 +47,6 @@ public class PostController {
     ) {
         Long postId = postService.createPost(
                 authenticatedUser.getUserId(),
-                request.getTitle(),
                 request.getContent(),
                 request.getImageUrl()
         );
@@ -75,11 +77,12 @@ public class PostController {
                 .map(PostCommentResponse::from)
                 .getContent();
 
-        return ResponseEntity.ok(PostDetailResponse.from(
-                post,
-                comments,
-                postService.getPostImageUrl(post),
-                postLikeService.isLiked(authenticatedUser.getUserId(), postId)
+        return ResponseEntity
+                .ok(PostDetailResponse.from(
+                    post,
+                    comments,
+                    postService.getPostImageUrl(post),
+                    postLikeService.isLiked(authenticatedUser.getUserId(), postId)
         ));
     }
 
@@ -104,10 +107,13 @@ public class PostController {
     // 게시물 삭제
     @DeleteMapping("/{postId}")
     public ResponseEntity<Void> deletePost(
-            @PathVariable Long postId,
-            @RequestParam(defaultValue = "1") Long userId
+            @AuthenticationPrincipal AuthenticatedUser authenticatedUser,
+            @PathVariable Long postId
     ) {
-        postService.deletePost(userId, postId);
+        postService.deletePost(
+                authenticatedUser.getUserId(),
+                postId
+        );
 
         return ResponseEntity.noContent().build();
     }
@@ -115,10 +121,13 @@ public class PostController {
     // 게시글 좋아요
     @PostMapping("/{postId}/likes")
     public ResponseEntity<PostLikeResponse> toggleLike(
-            @PathVariable Long postId,
-            @RequestParam(defaultValue = "1") Long userId
+            @AuthenticationPrincipal AuthenticatedUser authenticatedUser,
+            @PathVariable Long postId
     ) {
-        boolean liked = postLikeService.toggleLike(userId, postId);
+        boolean liked = postLikeService.toggleLike(
+                authenticatedUser.getUserId(),
+                postId
+        );
         int likeCount = Math.toIntExact(postLikeService.countLikes(postId));
 
         return ResponseEntity.ok(new PostLikeResponse(postId, liked, likeCount));
@@ -127,12 +136,12 @@ public class PostController {
     // 댓글 작성
     @PostMapping("/{postId}/comments/users/{userId}")
     public ResponseEntity<Long> createComment(
-            @PathVariable Long userId,
+            @AuthenticationPrincipal AuthenticatedUser authenticatedUser,
             @PathVariable Long postId,
             @Valid @RequestBody PostCommentCreateRequest request
     ) {
         Long commentId = commentService.createComment(
-                userId,
+                authenticatedUser.getUserId(),
                 postId,
                 request.getComment()
         );
@@ -145,13 +154,13 @@ public class PostController {
     // 댓글 수정
     @PatchMapping("/{postId}/comments/{commentId}/users/{userId}")
     public ResponseEntity<Void> updateComment(
-            @PathVariable Long userId,
+            @AuthenticationPrincipal AuthenticatedUser authenticatedUser,
             @PathVariable Long postId,
             @PathVariable Long commentId,
             @Valid @RequestBody PostCommentUpdateRequest request
     ) {
         commentService.updateComment(
-                userId,
+                authenticatedUser.getUserId(),
                 postId,
                 commentId,
                 request.getComment()
@@ -165,11 +174,14 @@ public class PostController {
     // 댓글 삭제
     @DeleteMapping("/{postId}/comments/{commentId}/users/{userId}")
     public ResponseEntity<Void> deleteComment(
-            @PathVariable Long userId,
+            @AuthenticationPrincipal AuthenticatedUser authenticatedUser,
             @PathVariable Long postId,
             @PathVariable Long commentId
     ) {
-        commentService.deleteComment(userId, postId, commentId);
+        commentService.deleteComment(
+                authenticatedUser.getUserId(),
+                postId,
+                commentId);
 
         return ResponseEntity.noContent().build();
     }

@@ -12,8 +12,6 @@ public class PostListResponse {
     @JsonProperty("post_id")
     private Long postId;
 
-    private String title;
-
     private String nickname;
 
     @JsonProperty("profile_image")

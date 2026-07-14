@@ -3,6 +3,7 @@ package com.ian.community.user.controller;
 import com.ian.community.common.exception.CustomException;
 import com.ian.community.common.exception.ErrorCode;
 import com.ian.community.security.jwt.JwtCookieProvider;
+import com.ian.community.security.principal.AuthenticatedUser;
 import com.ian.community.security.token.TokenPair;
 import com.ian.community.security.token.TokenService;
 import com.ian.community.user.domain.User;
@@ -17,6 +18,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -145,11 +147,14 @@ public class UserController {
 
     @PatchMapping("/{userId}/nickname")
     public ResponseEntity<Void> updateNickname(
-            @PathVariable Long userId,
+            @AuthenticationPrincipal AuthenticatedUser authenticatedUser,
             @Valid @RequestBody
             UserNicknameUpdateRequest request
     ) {
-        userService.updateNickname(userId, request);
+        userService.updateNickname(
+                authenticatedUser.getUserId(),
+                request
+        );
 
         return ResponseEntity
                 .noContent()
@@ -158,11 +163,14 @@ public class UserController {
 
     @PatchMapping("/{userId}/password")
     public ResponseEntity<Void> updatePassword(
-            @PathVariable Long userId,
+            @AuthenticationPrincipal AuthenticatedUser authenticatedUser,
             @Valid @RequestBody
             UserPasswordUpdateRequest request
     ) {
-        userService.updatePassword(userId, request);
+        userService.updatePassword(
+                authenticatedUser.getUserId(),
+                request
+        );
 
         return ResponseEntity
                 .noContent()
@@ -171,11 +179,14 @@ public class UserController {
 
     @PatchMapping("/{userId}/profile-image")
     public ResponseEntity<Void> updateProfile(
-            @PathVariable Long userId,
+            @AuthenticationPrincipal AuthenticatedUser authenticatedUser,
             @Valid @RequestBody
             UserProfileImageUpdateRequest request
     ) {
-        userService.updateProfile(userId, request);
+        userService.updateProfile(
+                authenticatedUser.getUserId(),
+                request
+        );
 
         return ResponseEntity
                 .noContent()
@@ -184,9 +195,9 @@ public class UserController {
 
     @DeleteMapping("/{userId}/delete")
     public ResponseEntity<Void> deleteUser(
-            @PathVariable Long userId
+            @AuthenticationPrincipal AuthenticatedUser authenticatedUser
     ) {
-        userService.deleteUser(userId);
+        userService.deleteUser(authenticatedUser.getUserId());
 
         return ResponseEntity
                 .noContent()

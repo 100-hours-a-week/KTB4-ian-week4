@@ -24,9 +24,6 @@ public class Post {
     @JoinColumn(name = "user_id", nullable = false)
     private User authorUser;
 
-    @Column(length = 26, nullable = false)
-    private String title;
-
     @Column(nullable = false, columnDefinition = "TEXT")
     private String content;
 
@@ -54,9 +51,8 @@ public class Post {
     @Column(name = "deleted_at")
     private LocalDateTime deletedAt;
 
-    public Post(User authorUser, String title, String content) {
+    public Post(User authorUser, String content) {
         this.authorUser = authorUser;
-        this.title = title;
         this.content = content;
         this.likeCount = 0;
         this.viewCount = 0;
@@ -68,8 +64,7 @@ public class Post {
         this.deletedAt = null;
     }
 
-    public void update(String title, String content) {
-        this.title = title;
+    public void update(String content) {
         this.content = content;
         this.updatedAt = LocalDateTime.now();
     }

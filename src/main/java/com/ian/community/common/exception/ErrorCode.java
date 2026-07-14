@@ -12,10 +12,14 @@ public enum ErrorCode {
     NICKNAME_ALREADY_EXISTS(HttpStatus.CONFLICT, "nickname_already_exists"),
     INVALID_SIGNUP_REQUEST(HttpStatus.BAD_REQUEST, "invalid_signup_request"),
 
-
     // 로그인
     INVALID_LOGIN_REQUEST(HttpStatus.BAD_REQUEST, "invalid_login_request"),
     INVALID_PASSWORD(HttpStatus.BAD_REQUEST, "invalid_password"),
+
+    // 비밀번호 변경
+    CURRENT_PASSWORD_MISMATCH(HttpStatus.BAD_REQUEST, "current_password_mismatch"),
+    NEW_PASSWORD_MISMATCH(HttpStatus.BAD_REQUEST, "new_password_mismatch"),
+    PASSWORD_SAME_AS_CURRENT(HttpStatus.CONFLICT, "password_same_as_current"),
 
     // 게시물 작성/수정
     INVALID_POST_REQUEST(HttpStatus.BAD_REQUEST, "invalid_post_request"),

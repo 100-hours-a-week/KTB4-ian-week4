@@ -12,8 +12,6 @@ public class PostCreateResponse {
     @JsonProperty("post_id")
     private Long postId;
 
-    private String title;
-
     private String content;
 
     @JsonProperty("like_count")

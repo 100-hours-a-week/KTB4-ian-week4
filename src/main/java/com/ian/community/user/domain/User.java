@@ -48,15 +48,15 @@ public class User {
     @Column(name = "deleted_at")
     private LocalDateTime deletedAt;
 
-    public User(String email, String password, String nickname, String profile) {
+    public User(String email, String password, String nickname) {
         this.email = email;
         this.password = password;
         this.nickname = nickname;
-        this.profileImage = profile;
+        this.profileImage = null;
         this.createdAt = LocalDateTime.now();
         this.passwordUpdatedAt = null;
         this.nicknameUpdatedAt = null;
-        this.profileUpdatedAt = LocalDateTime.now();
+        this.profileUpdatedAt = null;
         this.userDeleted = false;
         this.deletedAt = null;
     }

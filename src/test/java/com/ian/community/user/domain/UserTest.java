@@ -68,7 +68,6 @@ public class UserTest {
         );
 
         // 삭제 시간은 기존에 null이기에 실제로도 null을 유지하는지 검증합니다.
-        // 닉네임, 이메일, 비밀번호 null 되었는지 확인하는 코드 작성하기
         assertFalse(user.isUserDeleted());
         assertNull(user.getDeletedAt());
 
@@ -76,5 +75,8 @@ public class UserTest {
 
         assertTrue(user.isUserDeleted());
         assertNotNull(user.getDeletedAt());
+        assertNull(user.getEmail());
+        assertNull(user.getPassword());
+        assertEquals("알 수 없음", user.getNickname());
     }
 }

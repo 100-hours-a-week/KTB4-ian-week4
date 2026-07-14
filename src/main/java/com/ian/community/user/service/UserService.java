@@ -132,15 +132,31 @@ public class UserService {
             Long userId,
             UserPasswordUpdateRequest request) {
 
-        String encodedPassword =
-                passwordEncoder.encode(request.getPassword());
-
         User user = getActiveUser(userId);
 
-        if (!request.getPassword()
-                .equals(request.getPasswordConfirm())) {
-            throw new CustomException(ErrorCode.INVALID_PASSWORD);
+        if (!passwordEncoder.matches(
+                request.getPassword(),
+                user.getPassword()
+        )) {
+            throw new CustomException(ErrorCode.CURRENT_PASSWORD_MISMATCH);
         }
+
+        if (!Objects.equals(
+                request.getNewPassword(),
+                request.getNewPasswordConfirm()
+        )) {
+            throw new CustomException(ErrorCode.NEW_PASSWORD_MISMATCH);
+        }
+
+        if (passwordEncoder.matches(
+                request.getNewPassword(),
+                user.getPassword()
+        )) {
+            throw new CustomException(ErrorCode.NO_CHANGES_DETECTED);
+        }
+
+        String encodedPassword =
+                passwordEncoder.encode(request.getPassword());
 
         user.updatePassword(encodedPassword);
     }

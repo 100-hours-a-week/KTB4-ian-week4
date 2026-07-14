@@ -14,8 +14,6 @@ public class PostDetailResponse {
     @JsonProperty("post_id")
     private Long postId;
 
-    private String title;
-
     private String content;
 
     @JsonProperty("image_url")
@@ -47,7 +45,6 @@ public class PostDetailResponse {
 
     private PostDetailResponse(Post post) {
         this.postId = post.getPostId();
-        this.title = post.getTitle();
         this.content = post.getContent();
         this.nickname = post.getAuthorUser().getNickname();
         this.profileImage = post.getAuthorUser().getProfileImage();
