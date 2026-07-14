@@ -50,8 +50,7 @@ public class UserService {
         User user = new User(
                 request.getEmail(),
                 encodedPassword,
-                request.getNickname(),
-                request.getProfileImage()
+                request.getNickname()
         );
 
         userRepository.save(user);
