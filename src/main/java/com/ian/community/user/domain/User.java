@@ -1,12 +1,12 @@
 package com.ian.community.user.domain;
 
 import jakarta.persistence.*;
-
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
@@ -48,12 +48,12 @@ public class User {
     @Column(name = "deleted_at")
     private LocalDateTime deletedAt;
 
-    public User(String email, String password, String nickname) {
+    public User(String email, String password, String nickname, String profileImage) {
         this.email = email;
         this.password = password;
         this.nickname = nickname;
-        this.profileImage = null;
-        this.createdAt = LocalDateTime.now();
+        this.profileImage = profileImage;
+        this.createdAt = LocalDateTime.now(ZoneId.of("Asia/Seoul"));
         this.passwordUpdatedAt = null;
         this.nicknameUpdatedAt = null;
         this.profileUpdatedAt = null;
@@ -63,17 +63,17 @@ public class User {
 
     public void updateNickname(String nickname) {
         this.nickname = nickname;
-        this.nicknameUpdatedAt = LocalDateTime.now();
+        this.nicknameUpdatedAt = LocalDateTime.now(ZoneId.of("Asia/Seoul"));
     }
 
     public void updatePassword(String password) {
         this.password = password;
-        this.passwordUpdatedAt = LocalDateTime.now();
+        this.passwordUpdatedAt = LocalDateTime.now(ZoneId.of("Asia/Seoul"));
     }
 
-    public void updateProfile(String profile) {
-        this.profileImage = profile;
-        this.profileUpdatedAt = LocalDateTime.now();
+    public void updateProfile(String profileImage) {
+        this.profileImage = profileImage;
+        this.profileUpdatedAt = LocalDateTime.now(ZoneId.of("Asia/Seoul"));
     }
 
     public void delete() {
@@ -82,6 +82,6 @@ public class User {
         this.nickname = "알 수 없음";
         this.profileImage = "https://image.kr/default-profile.jpg";
         this.userDeleted = true;
-        this.deletedAt = LocalDateTime.now();
+        this.deletedAt = LocalDateTime.now(ZoneId.of("Asia/Seoul"));
     }
 }

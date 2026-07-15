@@ -1,14 +1,13 @@
 package com.ian.community.post.domain;
 
+import com.ian.community.user.domain.User;
 import jakarta.persistence.*;
-
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-import com.ian.community.user.domain.User;
-
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
@@ -58,15 +57,15 @@ public class Post {
         this.viewCount = 0;
         this.commentCount = 0;
         this.commentable = true; // 기본적으로 사용자가 선택하지 않을 경우에 기본값
-        this.createdAt = LocalDateTime.now();
-        this.updatedAt = LocalDateTime.now(); // Null 처리를 하려고 했다가 null 허용하지 않고 안전하게 게시글 생성 시에도 시간 데이터 넣도록 했습니다.
+        this.createdAt = LocalDateTime.now(ZoneId.of("Asia/Seoul"));
+        this.updatedAt = LocalDateTime.now(ZoneId.of("Asia/Seoul")); // Null 처리를 하려고 했다가 null 허용하지 않고 안전하게 게시글 생성 시에도 시간 데이터 넣도록 했습니다.
         this.postDeleted = false;
         this.deletedAt = null;
     }
 
     public void update(String content) {
         this.content = content;
-        this.updatedAt = LocalDateTime.now();
+        this.updatedAt = LocalDateTime.now(ZoneId.of("Asia/Seoul"));
     }
 
     public void increaseLikeCount() {
@@ -91,6 +90,6 @@ public class Post {
 
     public void delete() {
         this.postDeleted = true;
-        this.deletedAt = LocalDateTime.now();
+        this.deletedAt = LocalDateTime.now(ZoneId.of("Asia/Seoul"));
     }
 }

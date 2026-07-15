@@ -161,7 +161,7 @@ public class PostService {
 
     private void validatePostOwner(Post post, User user) {
         if (!post.getAuthorUser().getUserId().equals(user.getUserId())) {
-            throw new CustomException(ErrorCode.UNAUTHORIZED);
+            throw new CustomException(ErrorCode.FORBIDDEN);
         }
     }
 }

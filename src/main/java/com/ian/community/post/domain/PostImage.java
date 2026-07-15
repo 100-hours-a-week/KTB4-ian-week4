@@ -6,6 +6,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
@@ -37,7 +38,7 @@ public class PostImage {
     public PostImage(Post authorPost, String imageUrl) {
         this.authorPost = authorPost;
         this.imageUrl = imageUrl;
-        this.createdAt = LocalDateTime.now();
+        this.createdAt = LocalDateTime.now(ZoneId.of("Asia/Seoul"));
     }
 
     public void updateImageUrl(String imageUrl) {

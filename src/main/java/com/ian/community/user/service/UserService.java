@@ -50,7 +50,8 @@ public class UserService {
         User user = new User(
                 request.getEmail(),
                 encodedPassword,
-                request.getNickname()
+                request.getNickname(),
+                request.getProfileImage()
         );
 
         userRepository.save(user);
@@ -155,7 +156,7 @@ public class UserService {
         }
 
         String encodedPassword =
-                passwordEncoder.encode(request.getPassword());
+                passwordEncoder.encode(request.getNewPassword());
 
         user.updatePassword(encodedPassword);
     }

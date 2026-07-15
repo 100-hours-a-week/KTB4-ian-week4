@@ -1,12 +1,13 @@
 package com.ian.community.post.domain;
 
+import com.ian.community.user.domain.User;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import com.ian.community.user.domain.User;
 
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
@@ -39,7 +40,7 @@ public class PostView {
     public PostView(User authorUser, Post authorPost) {
         this.authorUser = authorUser;
         this.authorPost = authorPost;
-        this.viewedAt = LocalDateTime.now();
+        this.viewedAt = LocalDateTime.now(ZoneId.of("Asia/Seoul"));
     }
 
     public void updateViewedAt() {

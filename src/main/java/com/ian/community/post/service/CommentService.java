@@ -102,7 +102,7 @@ public class CommentService {
 
     private void validateCommentOwner(PostComment comment, User user) {
         if (!comment.getAuthorUser().getUserId().equals(user.getUserId())) {
-            throw new CustomException(ErrorCode.UNAUTHORIZED);
+            throw new CustomException(ErrorCode.FORBIDDEN);
         }
     }
 }

@@ -1,12 +1,13 @@
 package com.ian.community.post.domain;
 
+import com.ian.community.user.domain.User;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import com.ian.community.user.domain.User;
 
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
@@ -45,20 +46,20 @@ public class PostComment {
         this.authorUser = authorUser;
         this.authorPost = authorPost;
         this.comment = comment;
-        this.createdAt = LocalDateTime.now();
-        this.updatedAt = LocalDateTime.now();
+        this.createdAt = LocalDateTime.now(ZoneId.of("Asia/Seoul"));
+        this.updatedAt = LocalDateTime.now(ZoneId.of("Asia/Seoul"));
         this.commentDeleted = false;
         this.deletedAt = null;
     }
 
     public void updateContent(String comment) {
         this.comment = comment;
-        this.updatedAt = LocalDateTime.now();
+        this.updatedAt = LocalDateTime.now(ZoneId.of("Asia/Seoul"));
     }
 
     public void delete() {
         this.comment = "삭제된 댓글입니다.";
         this.commentDeleted = true;
-        this.deletedAt = LocalDateTime.now();
+        this.deletedAt = LocalDateTime.now(ZoneId.of("Asia/Seoul"));
     }
 }
