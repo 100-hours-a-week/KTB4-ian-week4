@@ -31,7 +31,7 @@ public class UserService {
     }
 
     @Transactional
-    public void signup(SignupRequest request) {
+    public User signup(SignupRequest request) {
         if (userRepository.existsByEmail(request.getEmail())) {
             throw new CustomException(ErrorCode.EMAIL_ALREADY_EXISTS);
         }
@@ -54,7 +54,7 @@ public class UserService {
                 request.getProfileImage()
         );
 
-        userRepository.save(user);
+        return userRepository.save(user);
     }
 
     @Transactional(readOnly = true)

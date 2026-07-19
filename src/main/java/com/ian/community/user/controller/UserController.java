@@ -15,12 +15,10 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.multipart.MultipartFile;
 
 import java.util.Arrays;
 
@@ -38,14 +36,31 @@ public class UserController {
             consumes = MediaType.MULTIPART_FORM_DATA_VALUE
     )
     public ResponseEntity<Void> signup(
-            @RequestPart("request") SignupRequest request,
-            @RequestPart(value = "image", required = false)
-            MultipartFile image
+            @Valid @RequestBody SignupRequest request
     ) {
-        userService.signup(request);
+        User user = userService.signup(request);
+
+        TokenPair tokenPair =
+                tokenService.issueInitialTokens(user);
 
         return ResponseEntity
-                .status(HttpStatus.CREATED)
+                .ok()
+                .header(
+                        HttpHeaders.SET_COOKIE,
+                        jwtCookieProvider
+                                .createAccessCookie(
+                                        tokenPair.accessToken()
+                                )
+                                .toString()
+                )
+                .header(
+                        HttpHeaders.SET_COOKIE,
+                        jwtCookieProvider
+                                .createRefreshCookie(
+                                        tokenPair.refreshToken()
+                                )
+                                .toString()
+                )
                 .build();
     }
 
