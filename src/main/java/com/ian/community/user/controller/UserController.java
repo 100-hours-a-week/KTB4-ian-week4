@@ -33,7 +33,7 @@ public class UserController {
 
     @PostMapping(
             value = "/signup",
-            consumes = MediaType.MULTIPART_FORM_DATA_VALUE
+            consumes = MediaType.APPLICATION_JSON_VALUE
     )
     public ResponseEntity<Void> signup(
             @Valid @RequestBody SignupRequest request
@@ -153,10 +153,10 @@ public class UserController {
 
     @GetMapping("/{userId}")
     public ResponseEntity<UserResponse> getUser(
-            @PathVariable Long userId
+            @AuthenticationPrincipal AuthenticatedUser authenticatedUser
     ) {
         return ResponseEntity.ok(
-                userService.getUser(userId)
+                userService.getUser(authenticatedUser.getUserId())
         );
     }
 
