@@ -2,11 +2,8 @@ package com.ian.community.user.service;
 
 import com.ian.community.common.exception.CustomException;
 import com.ian.community.common.exception.ErrorCode;
-import com.ian.community.image.domain.ImageAsset;
-import com.ian.community.image.service.ImageLifecycleService;
 import com.ian.community.user.domain.User;
 import com.ian.community.user.dto.request.*;
-import com.ian.community.user.dto.response.CurrentUserResponse;
 import com.ian.community.user.dto.response.UserResponse;
 import com.ian.community.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -21,7 +18,6 @@ import java.util.Objects;
 public class UserService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
-    private final ImageLifecycleService imageLifecycleService;
 
     private User getActiveUser(Long userId) {
         User user = userRepository.findById(userId)
@@ -61,19 +57,15 @@ public class UserService {
     }
 
     @Transactional(readOnly = true)
-    public CurrentUserResponse getCurrentUser(Long userId) {
-        return CurrentUserResponse.from(getActiveUser(userId));
-    }
+    public UserResponse getUser(Long userId) {
+        User user = getActiveUser(userId);
 
-    private User getActiveUser(Long userId) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() ->
-                        new CustomException(ErrorCode.USER_NOT_FOUND));
-
-        if (user.isUserDeleted()) {
-            throw new CustomException(ErrorCode.USER_ALREADY_DELETED);
-        }
-        return user;
+        return new UserResponse(
+                user.getUserId(),
+                user.getEmail(),
+                user.getNickname(),
+                user.getProfileImage()
+        );
     }
 
     @Transactional(readOnly = true)
@@ -120,6 +112,21 @@ public class UserService {
     }
 
     @Transactional
+    public void updateProfile(
+            Long userId,
+            UserProfileImageUpdateRequest request) {
+
+        User user = getActiveUser(userId);
+
+        if (user.getProfileImage()
+                .equals(request.getProfileImage())) {
+            throw new CustomException(ErrorCode.NO_CHANGES_DETECTED);
+        }
+
+        user.updateProfile(request.getProfileImage());
+    }
+
+    @Transactional
     public void updatePassword(
             Long userId,
             UserPasswordUpdateRequest request) {
@@ -156,11 +163,6 @@ public class UserService {
     @Transactional
     public void deleteUser(Long userId) {
         User user = getActiveUser(userId);
-
-        if (oldImage != null) {
-            user.resetProfileImage();
-            imageLifecycleService.softDelete(oldImage);
-        }
 
         user.delete();
     }
