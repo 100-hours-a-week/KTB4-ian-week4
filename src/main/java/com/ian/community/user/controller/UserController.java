@@ -7,18 +7,25 @@ import com.ian.community.security.principal.AuthenticatedUser;
 import com.ian.community.security.token.TokenPair;
 import com.ian.community.security.token.TokenService;
 import com.ian.community.user.domain.User;
-import com.ian.community.user.dto.request.*;
-import com.ian.community.user.dto.response.UserResponse;
+import com.ian.community.user.dto.request.LoginRequest;
+import com.ian.community.user.dto.request.SignupRequest;
+import com.ian.community.user.dto.request.UserNicknameUpdateRequest;
+import com.ian.community.user.dto.request.UserPasswordUpdateRequest;
+import com.ian.community.user.dto.response.CurrentUserResponse;
+import com.ian.community.user.dto.response.ProfileImageResponse;
+import com.ian.community.user.service.ProfileImageService;
 import com.ian.community.user.service.UserService;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.Arrays;
 
@@ -28,6 +35,7 @@ import java.util.Arrays;
 public class UserController {
 
     private final UserService userService;
+    private final ProfileImageService profileImageService;
     private final TokenService tokenService;
     private final JwtCookieProvider jwtCookieProvider;
 
@@ -35,7 +43,7 @@ public class UserController {
             value = "/signup",
             consumes = MediaType.APPLICATION_JSON_VALUE
     )
-    public ResponseEntity<Void> signup(
+    public ResponseEntity<CurrentUserResponse> signup(
             @Valid @RequestBody SignupRequest request
     ) {
         User user = userService.signup(request);
@@ -44,7 +52,7 @@ public class UserController {
                 tokenService.issueInitialTokens(user);
 
         return ResponseEntity
-                .ok()
+                .status(HttpStatus.CREATED)
                 .header(
                         HttpHeaders.SET_COOKIE,
                         jwtCookieProvider
@@ -61,11 +69,15 @@ public class UserController {
                                 )
                                 .toString()
                 )
-                .build();
+                .body(
+                        userService.getCurrentUser(
+                                user.getUserId()
+                        )
+                );
     }
 
     @PostMapping("/login")
-    public ResponseEntity<Void> login(
+    public ResponseEntity<CurrentUserResponse> login(
             @Valid @RequestBody LoginRequest request
     ) {
         User user = userService.login(request);
@@ -91,7 +103,12 @@ public class UserController {
                                 )
                                 .toString()
                 )
-                .build();
+                .body(
+                        userService
+                                .getCurrentUser(
+                                        user.getUserId()
+                                )
+                );
     }
 
     @PostMapping("/refresh")
@@ -129,10 +146,7 @@ public class UserController {
     public ResponseEntity<Void> logout(
             HttpServletRequest request
     ) {
-        String refreshToken =
-                resolveRefreshTokenOrNull(request);
-
-        tokenService.logout(refreshToken);
+        tokenService.logout(resolveRefreshTokenOrNull(request));
 
         return ResponseEntity
                 .noContent()
@@ -151,23 +165,23 @@ public class UserController {
                 .build();
     }
 
-    @GetMapping("/{userId}")
-    public ResponseEntity<UserResponse> getUser(
-            @AuthenticationPrincipal AuthenticatedUser authenticatedUser
+    @GetMapping("/me")
+    public ResponseEntity<CurrentUserResponse> getCurrentUser(
+            @AuthenticationPrincipal AuthenticatedUser principal
     ) {
         return ResponseEntity.ok(
-                userService.getUser(authenticatedUser.getUserId())
+                userService.getCurrentUser(principal.getUserId())
         );
     }
 
-    @PatchMapping("/{userId}/nickname")
+    @PatchMapping("/me/nickname")
     public ResponseEntity<Void> updateNickname(
-            @AuthenticationPrincipal AuthenticatedUser authenticatedUser,
+            @AuthenticationPrincipal AuthenticatedUser principal,
             @Valid @RequestBody
             UserNicknameUpdateRequest request
     ) {
         userService.updateNickname(
-                authenticatedUser.getUserId(),
+                principal.getUserId(),
                 request
         );
 
@@ -176,14 +190,14 @@ public class UserController {
                 .build();
     }
 
-    @PatchMapping("/{userId}/password")
+    @PatchMapping("/me/password")
     public ResponseEntity<Void> updatePassword(
-            @AuthenticationPrincipal AuthenticatedUser authenticatedUser,
+            @AuthenticationPrincipal AuthenticatedUser principal,
             @Valid @RequestBody
             UserPasswordUpdateRequest request
     ) {
         userService.updatePassword(
-                authenticatedUser.getUserId(),
+                principal.getUserId(),
                 request
         );
 
@@ -192,30 +206,43 @@ public class UserController {
                 .build();
     }
 
-    @PatchMapping("/{userId}/profile-image")
-    public ResponseEntity<Void> updateProfile(
-            @AuthenticationPrincipal AuthenticatedUser authenticatedUser,
-            @Valid @RequestBody
-            UserProfileImageUpdateRequest request
+    @PatchMapping(
+            value = "/me/profile-image",
+            consumes = MediaType.APPLICATION_JSON_VALUE
+    )
+    public ResponseEntity<ProfileImageResponse> updateProfileImage(
+            @AuthenticationPrincipal AuthenticatedUser principal,
+            @RequestPart("image") MultipartFile image
     ) {
-        userService.updateProfile(
-                authenticatedUser.getUserId(),
-                request
+        return ResponseEntity.ok(
+                profileImageService.update(
+                        principal.getUserId(),
+                        image
+                )
         );
-
-        return ResponseEntity
-                .noContent()
-                .build();
     }
 
-    @DeleteMapping("/{userId}/delete")
+    @DeleteMapping("/me/profile-image")
+    public ResponseEntity<ProfileImageResponse> resetProfileImage(
+            @AuthenticationPrincipal AuthenticatedUser principal
+    ) {
+        return ResponseEntity.ok(
+                profileImageService.reset(principal.getUserId())
+        );
+    }
+
+    @DeleteMapping("/me/delete")
     public ResponseEntity<Void> deleteUser(
-            @AuthenticationPrincipal AuthenticatedUser authenticatedUser
+            @AuthenticationPrincipal AuthenticatedUser principal
     ) {
-        userService.deleteUser(authenticatedUser.getUserId());
+        userService.deleteUser(principal.getUserId());
+        tokenService.logoutAll(principal.getUserId());
 
-        return ResponseEntity
-                .noContent()
+        return ResponseEntity.noContent()
+                .header(HttpHeaders.SET_COOKIE,
+                        jwtCookieProvider.deleteAccessCookie().toString())
+                .header(HttpHeaders.SET_COOKIE,
+                        jwtCookieProvider.deleteRefreshCookie().toString())
                 .build();
     }
 

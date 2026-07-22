@@ -50,6 +50,9 @@ dependencies {
 	}
 
 	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+
+	// WebP
+	implementation 'com.github.usefulness:webp-imageio:0.11.0'
 }
 
 tasks.named('test') {
