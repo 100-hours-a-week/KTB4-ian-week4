@@ -5,9 +5,11 @@ import com.ian.community.common.exception.ErrorCode;
 import com.ian.community.image.domain.ImageAsset;
 import com.ian.community.image.service.ImageLifecycleService;
 import com.ian.community.user.domain.User;
-import com.ian.community.user.dto.request.*;
+import com.ian.community.user.dto.request.LoginRequest;
+import com.ian.community.user.dto.request.SignupRequest;
+import com.ian.community.user.dto.request.UserNicknameUpdateRequest;
+import com.ian.community.user.dto.request.UserPasswordUpdateRequest;
 import com.ian.community.user.dto.response.CurrentUserResponse;
-import com.ian.community.user.dto.response.UserResponse;
 import com.ian.community.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -63,17 +65,6 @@ public class UserService {
     @Transactional(readOnly = true)
     public CurrentUserResponse getCurrentUser(Long userId) {
         return CurrentUserResponse.from(getActiveUser(userId));
-    }
-
-    private User getActiveUser(Long userId) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() ->
-                        new CustomException(ErrorCode.USER_NOT_FOUND));
-
-        if (user.isUserDeleted()) {
-            throw new CustomException(ErrorCode.USER_ALREADY_DELETED);
-        }
-        return user;
     }
 
     @Transactional(readOnly = true)
@@ -156,6 +147,7 @@ public class UserService {
     @Transactional
     public void deleteUser(Long userId) {
         User user = getActiveUser(userId);
+        ImageAsset oldImage = user.getProfileImageAsset();
 
         if (oldImage != null) {
             user.resetProfileImage();

@@ -50,7 +50,7 @@ public class ImageAsset {
     private List<ImageVariant> variants = new ArrayList<>();
 
     public ImageAsset(Long ownerUserId, ImageType imageType, Clock clock) {
-        this.imageAssetId = UUID.randomUUID();
+        this.imageAssetId = UUID.randomUUID();      // 랜덤한 UUID 값
         this.ownerUserId = ownerUserId;
         this.imageType = imageType;
         this.status = ImageStatus.ACTIVE;

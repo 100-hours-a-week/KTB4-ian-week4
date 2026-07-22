@@ -1,5 +1,7 @@
 package com.ian.community.user.dto.response;
 
+import com.ian.community.image.domain.ImageAsset;
+
 public record ProfileImageResponse(
         String highUrl,
         String mediumUrl,
