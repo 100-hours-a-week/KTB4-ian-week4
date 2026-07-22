@@ -208,7 +208,7 @@ public class UserController {
 
     @PatchMapping(
             value = "/me/profile-image",
-            consumes = MediaType.MULTIPART_FORM_DATA_VALUE
+            consumes = MediaType.APPLICATION_JSON_VALUE
     )
     public ResponseEntity<ProfileImageResponse> updateProfileImage(
             @AuthenticationPrincipal AuthenticatedUser principal,
