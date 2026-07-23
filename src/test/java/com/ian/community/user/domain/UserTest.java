@@ -11,8 +11,7 @@ public class UserTest {
         User user = new User(
                 "email@email.com",
                 "Qwer!234",
-                "닉네임",
-                "https://image.kr/profile.jpg"
+                "닉네임"
         );
 
         // when
@@ -28,8 +27,7 @@ public class UserTest {
         User user = new User(
                 "email@email.com",
                 "Qwer!234",
-                "닉네임",
-                "https://image.kr/profile.jpg"
+                "닉네임"
         );
 
         assertNull(user.getPasswordUpdatedAt());
@@ -46,10 +44,10 @@ public class UserTest {
         User user = new User(
                 "email@email.com",
                 "Qwer!234",
-                "닉네임",
-                "https://image.kr/profile.jpg"
+                "닉네임"
         );
 
+        assertEquals("/images/profile-default.svg", user.getProfileImage());
         assertNull(user.getProfileUpdatedAt());
 
         user.updateProfile("https://image.kr/image.jpg");
@@ -63,8 +61,7 @@ public class UserTest {
         User user = new User(
                 "email@email.com",
                 "Qwer!234",
-                "닉네임",
-                "https://image.kr/profile.jpg"
+                "닉네임"
         );
 
         // 삭제 시간은 기존에 null이기에 실제로도 null을 유지하는지 검증합니다.

@@ -13,8 +13,11 @@ spring:
     hibernate:
       ddl-auto: create-drop
 
+  flyway:
+    enabled: false
+
 jwt:
-  secret: test-secret-key-for-local-automated-tests-only
+  secret: dGVtcG9yYXJ5LWxvY2FsLWgyLXZlcmlmaWNhdGlvbi1zZWNyZXQtMjAyNi1sb25n
 
 app:
   frontend-origin: http://127.0.0.1:5500

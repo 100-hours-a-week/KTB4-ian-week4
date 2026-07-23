@@ -13,6 +13,8 @@ import java.time.ZoneId;
 @Entity
 @Table(name = "users")
 public class User {
+    private static final String DEFAULT_PROFILE_IMAGE = "/images/profile-default.svg";
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "user_id", nullable = false)
@@ -52,6 +54,7 @@ public class User {
         this.email = email;
         this.password = password;
         this.nickname = nickname;
+        this.profileImage = DEFAULT_PROFILE_IMAGE;
         this.createdAt = LocalDateTime.now(ZoneId.of("Asia/Seoul"));
         this.passwordUpdatedAt = null;
         this.nicknameUpdatedAt = null;
@@ -79,7 +82,7 @@ public class User {
         this.email =  null;
         this.password = null;
         this.nickname = "알 수 없음";
-        this.profileImage = "https://image.kr/default-profile.jpg";
+        this.profileImage = DEFAULT_PROFILE_IMAGE;
         this.userDeleted = true;
         this.deletedAt = LocalDateTime.now(ZoneId.of("Asia/Seoul"));
     }
