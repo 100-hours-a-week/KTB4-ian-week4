@@ -112,18 +112,16 @@ public class UserService {
     }
 
     @Transactional
-    public void updateProfile(
-            Long userId,
-            UserProfileImageUpdateRequest request) {
+    public void updateProfile(Long userId, String profileImage) {
 
         User user = getActiveUser(userId);
 
         if (user.getProfileImage()
-                .equals(request.getProfileImage())) {
+                .equals(profileImage)) {
             throw new CustomException(ErrorCode.NO_CHANGES_DETECTED);
         }
 
-        user.updateProfile(request.getProfileImage());
+        user.updateProfile(profileImage);
     }
 
     @Transactional

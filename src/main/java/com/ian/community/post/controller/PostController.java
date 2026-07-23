@@ -1,6 +1,7 @@
 package com.ian.community.post.controller;
 
 import com.ian.community.common.ApiResponse;
+import com.ian.community.common.image.LocalImageStorageService;
 import com.ian.community.post.domain.Post;
 import com.ian.community.post.dto.request.PostCommentCreateRequest;
 import com.ian.community.post.dto.request.PostCommentUpdateRequest;
@@ -18,9 +19,11 @@ import jakarta.validation.Valid;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -30,17 +33,20 @@ public class PostController {
     private final PostService postService;
     private final CommentService commentService;
     private final PostLikeService postLikeService;
+    private final LocalImageStorageService imageStorageService;
 
     public PostController(
             PostService postService,
             CommentService commentService,
-            PostLikeService postLikeService) {
+            PostLikeService postLikeService,
+            LocalImageStorageService imageStorageService) {
         this.postService = postService;
         this.commentService = commentService;
         this.postLikeService = postLikeService;
+        this.imageStorageService = imageStorageService;
     }
 
-    @PostMapping("/{userId}")
+    @PostMapping(value = "/{userId}", consumes = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<Long> createPost(
             @AuthenticationPrincipal AuthenticatedUser authenticatedUser,
             @Valid  @RequestBody PostCreateRequest request
@@ -49,6 +55,22 @@ public class PostController {
                 authenticatedUser.getUserId(),
                 request.getContent(),
                 request.getImageUrl()
+        );
+
+        return ResponseEntity.status(HttpStatus.CREATED).body(postId);
+    }
+
+    @PostMapping(value = "/{userId}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<Long> createPostWithImage(
+            @AuthenticationPrincipal AuthenticatedUser authenticatedUser,
+            @RequestPart("content") String content,
+            @RequestPart(value = "image", required = false) MultipartFile image
+    ) {
+        String imageUrl = image == null ? null : imageStorageService.storeFeed(image);
+        Long postId = postService.createPost(
+                authenticatedUser.getUserId(),
+                content,
+                imageUrl
         );
 
         return ResponseEntity.status(HttpStatus.CREATED).body(postId);

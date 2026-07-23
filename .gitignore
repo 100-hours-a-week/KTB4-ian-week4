@@ -39,3 +39,6 @@ out/
 # Local H2 database files
 /data/
 !/data/.gitkeep
+
+# Local uploaded images
+/storage/

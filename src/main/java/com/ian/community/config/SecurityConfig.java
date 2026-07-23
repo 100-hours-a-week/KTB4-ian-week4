@@ -52,9 +52,10 @@ public class SecurityConfig {
                         Customizer.withDefaults()
                 )
 
-                .csrf(csrf ->
-                        csrf.spa()
-                )
+                .csrf(csrf -> {
+                    csrf.ignoringRequestMatchers("/h2-console/**");
+                    csrf.spa();
+                })
 
                 .sessionManagement(session ->
                         session.sessionCreationPolicy(
@@ -75,6 +76,7 @@ public class SecurityConfig {
                                         "/css/**",
                                         "/js/**",
                                         "/images/**",
+                                        "/uploads/**",
                                         "/favicon.ico"
                                 ).permitAll()
 

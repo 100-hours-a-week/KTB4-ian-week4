@@ -2,12 +2,16 @@ package com.ian.community.user.controller;
 
 import com.ian.community.common.exception.CustomException;
 import com.ian.community.common.exception.ErrorCode;
+import com.ian.community.common.image.LocalImageStorageService;
 import com.ian.community.security.jwt.JwtCookieProvider;
 import com.ian.community.security.principal.AuthenticatedUser;
 import com.ian.community.security.token.TokenPair;
 import com.ian.community.security.token.TokenService;
 import com.ian.community.user.domain.User;
 import com.ian.community.user.dto.request.*;
+import com.ian.community.user.dto.response.LoginResponse;
+import com.ian.community.user.dto.response.SignupResponse;
+import com.ian.community.user.dto.response.UserUpdateResponse;
 import com.ian.community.user.dto.response.UserResponse;
 import com.ian.community.user.service.UserService;
 import jakarta.servlet.http.Cookie;
@@ -19,6 +23,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.Arrays;
 
@@ -30,12 +35,13 @@ public class UserController {
     private final UserService userService;
     private final TokenService tokenService;
     private final JwtCookieProvider jwtCookieProvider;
+    private final LocalImageStorageService imageStorageService;
 
     @PostMapping(
             value = "/signup",
             consumes = MediaType.APPLICATION_JSON_VALUE
     )
-    public ResponseEntity<Void> signup(
+    public ResponseEntity<SignupResponse> signup(
             @Valid @RequestBody SignupRequest request
     ) {
         User user = userService.signup(request);
@@ -61,11 +67,11 @@ public class UserController {
                                 )
                                 .toString()
                 )
-                .build();
+                .body(new SignupResponse(user.getUserId()));
     }
 
     @PostMapping("/login")
-    public ResponseEntity<Void> login(
+    public ResponseEntity<LoginResponse> login(
             @Valid @RequestBody LoginRequest request
     ) {
         User user = userService.login(request);
@@ -91,7 +97,7 @@ public class UserController {
                                 )
                                 .toString()
                 )
-                .build();
+                .body(new LoginResponse(user.getUserId()));
     }
 
     @PostMapping("/refresh")
@@ -192,20 +198,22 @@ public class UserController {
                 .build();
     }
 
-    @PatchMapping("/{userId}/profile-image")
-    public ResponseEntity<Void> updateProfile(
+    @PatchMapping(
+            value = {"/{userId}/profile-image", "/{userId}/profile"},
+            consumes = MediaType.MULTIPART_FORM_DATA_VALUE
+    )
+    public ResponseEntity<UserUpdateResponse> updateProfile(
             @AuthenticationPrincipal AuthenticatedUser authenticatedUser,
-            @Valid @RequestBody
-            UserProfileImageUpdateRequest request
+            @RequestPart("image") MultipartFile image
     ) {
+        String profileImage = imageStorageService.storeProfile(image);
         userService.updateProfile(
                 authenticatedUser.getUserId(),
-                request
+                profileImage
         );
 
         return ResponseEntity
-                .noContent()
-                .build();
+                .ok(new UserUpdateResponse(profileImage));
     }
 
     @DeleteMapping("/{userId}/delete")

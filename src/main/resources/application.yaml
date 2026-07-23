@@ -4,7 +4,7 @@ spring:
 
   datasource:
     driver-class-name: org.h2.Driver
-    url: "jdbc:h2:file:./data/community;DB_CLOSE_ON_EXIT=FALSE;AUTO_SERVER=TRUE"
+    url: jdbc:h2:mem:${H2_DATABASE_NAME:community};DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
     username: sa
     password:
 
@@ -20,8 +20,6 @@ spring:
 
   # JPA 설정
   jpa:
-    database-platform: org.hibernate.dialect.H2Dialect
-
     hibernate:
       ddl-auto: none
 
@@ -47,6 +45,8 @@ spring:
 
 app:
   frontend-origin: http://127.0.0.1:5500
+  storage:
+    root: ${LOCAL_STORAGE_PATH:./storage/images}
   cookie:
     secure: false      # 서비스 시에는 true로 설정, 테스트 진행 시에만 false
     same-site: Lax
