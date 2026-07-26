@@ -7,11 +7,13 @@ import com.ian.community.post.dto.request.PostCommentCreateRequest;
 import com.ian.community.post.dto.request.PostCommentUpdateRequest;
 import com.ian.community.post.dto.request.PostCreateRequest;
 import com.ian.community.post.dto.request.PostUpdateRequest;
+import com.ian.community.post.dto.response.PostBookmarkResponse;
 import com.ian.community.post.dto.response.PostCommentResponse;
 import com.ian.community.post.dto.response.PostDetailResponse;
 import com.ian.community.post.dto.response.PostLikeResponse;
 import com.ian.community.post.dto.response.PostResponse;
 import com.ian.community.post.service.CommentService;
+import com.ian.community.post.service.PostBookmarkService;
 import com.ian.community.post.service.PostLikeService;
 import com.ian.community.post.service.PostService;
 import com.ian.community.security.principal.AuthenticatedUser;
@@ -33,16 +35,19 @@ public class PostController {
     private final PostService postService;
     private final CommentService commentService;
     private final PostLikeService postLikeService;
+    private final PostBookmarkService postBookmarkService;
     private final LocalImageStorageService imageStorageService;
 
     public PostController(
             PostService postService,
             CommentService commentService,
             PostLikeService postLikeService,
+            PostBookmarkService postBookmarkService,
             LocalImageStorageService imageStorageService) {
         this.postService = postService;
         this.commentService = commentService;
         this.postLikeService = postLikeService;
+        this.postBookmarkService = postBookmarkService;
         this.imageStorageService = imageStorageService;
     }
 
@@ -78,12 +83,40 @@ public class PostController {
 
     // 게시물 목록 조회
     @GetMapping
-    public ResponseEntity<ApiResponse<Page<PostResponse>>> findAll(Pageable pageable) {
+    public ResponseEntity<ApiResponse<Page<PostResponse>>> findAll(
+            @AuthenticationPrincipal AuthenticatedUser authenticatedUser,
+            Pageable pageable
+    ) {
         Page<PostResponse> response = postService.getPosts(pageable)
-                .map(post -> new PostResponse(post, postService.getPostImageUrl(post)));
+                .map(post -> new PostResponse(
+                        post,
+                        postService.getPostImageUrl(post),
+                        postBookmarkService.isBookmarked(
+                                authenticatedUser.getUserId(),
+                                post.getPostId()
+                        )
+                ));
 
         return ResponseEntity
                 .ok(new ApiResponse<>("post_list_found", response));
+    }
+
+    // 내 북마크 목록 조회
+    @GetMapping("/bookmarks")
+    public ResponseEntity<ApiResponse<Page<PostResponse>>> findBookmarks(
+            @AuthenticationPrincipal AuthenticatedUser authenticatedUser,
+            Pageable pageable
+    ) {
+        Page<PostResponse> response = postBookmarkService
+                .getBookmarkedPosts(authenticatedUser.getUserId(), pageable)
+                .map(post -> new PostResponse(
+                        post,
+                        postService.getPostImageUrl(post),
+                        true
+                ));
+
+        return ResponseEntity
+                .ok(new ApiResponse<>("bookmark_list_found", response));
     }
 
     // 게시물 상세 조회
@@ -104,7 +137,8 @@ public class PostController {
                     post,
                     comments,
                     postService.getPostImageUrl(post),
-                    postLikeService.isLiked(authenticatedUser.getUserId(), postId)
+                    postLikeService.isLiked(authenticatedUser.getUserId(), postId),
+                    postBookmarkService.isBookmarked(authenticatedUser.getUserId(), postId)
         ));
     }
 
@@ -153,6 +187,20 @@ public class PostController {
         int likeCount = Math.toIntExact(postLikeService.countLikes(postId));
 
         return ResponseEntity.ok(new PostLikeResponse(postId, liked, likeCount));
+    }
+
+    // 게시글 북마크
+    @PostMapping("/{postId}/bookmarks")
+    public ResponseEntity<PostBookmarkResponse> toggleBookmark(
+            @AuthenticationPrincipal AuthenticatedUser authenticatedUser,
+            @PathVariable Long postId
+    ) {
+        boolean bookmarked = postBookmarkService.toggleBookmark(
+                authenticatedUser.getUserId(),
+                postId
+        );
+
+        return ResponseEntity.ok(new PostBookmarkResponse(postId, bookmarked));
     }
 
     // 댓글 작성
