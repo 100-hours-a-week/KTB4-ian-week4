@@ -42,7 +42,7 @@ public class PostDetailResponse {
     private boolean postDeleted;
 
     private boolean liked;
-    private boolean bookmarked;
+    private boolean bookmark;
 
     private PostDetailResponse(Post post) {
         this.postId = post.getPostId();
@@ -61,13 +61,13 @@ public class PostDetailResponse {
             List<PostCommentResponse> comments,
             String imageUrl,
             boolean liked,
-            boolean bookmarked
+            boolean bookmark
     ) {
         PostDetailResponse response = new PostDetailResponse(post);
         response.comment = comments;
         response.imageUrl = imageUrl;
         response.liked = liked;
-        response.bookmarked = bookmarked;
+        response.bookmark = bookmark;
         return response;
     }
 }
