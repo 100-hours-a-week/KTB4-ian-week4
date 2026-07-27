@@ -4,6 +4,8 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseCookie;
 import org.springframework.stereotype.Component;
 
+import java.time.Instant;
+
 @Component
 public class JwtCookieProvider {
 
@@ -12,6 +14,9 @@ public class JwtCookieProvider {
 
     public static final String REFRESH_TOKEN_COOKIE =
             "refreshToken";
+
+    public static final String ACCESS_TOKEN_EXPIRES_AT_COOKIE =
+            "accessTokenExpiresAt";
 
     private final JwtTokenProvider jwtTokenProvider;
     private final boolean cookieSecure;
@@ -61,6 +66,30 @@ public class JwtCookieProvider {
                 .build();
     }
 
+    public ResponseCookie createAccessExpirationCookie() {
+        long expiresAt = Instant.now()
+                .plusSeconds(
+                        jwtTokenProvider
+                                .getAccessExpirationSeconds()
+                )
+                .toEpochMilli();
+
+        return ResponseCookie
+                .from(
+                        ACCESS_TOKEN_EXPIRES_AT_COOKIE,
+                        Long.toString(expiresAt)
+                )
+                .httpOnly(false)
+                .secure(cookieSecure)
+                .sameSite(sameSite)
+                .path("/")
+                .maxAge(
+                        jwtTokenProvider
+                                .getAccessExpirationSeconds()
+                )
+                .build();
+    }
+
     public ResponseCookie deleteAccessCookie() {
         return ResponseCookie
                 .from(ACCESS_TOKEN_COOKIE, "")
@@ -79,6 +108,17 @@ public class JwtCookieProvider {
                 .secure(cookieSecure)
                 .sameSite(sameSite)
                 .path("/api/users")
+                .maxAge(0)
+                .build();
+    }
+
+    public ResponseCookie deleteAccessExpirationCookie() {
+        return ResponseCookie
+                .from(ACCESS_TOKEN_EXPIRES_AT_COOKIE, "")
+                .httpOnly(false)
+                .secure(cookieSecure)
+                .sameSite(sameSite)
+                .path("/")
                 .maxAge(0)
                 .build();
     }

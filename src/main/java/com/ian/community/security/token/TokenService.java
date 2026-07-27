@@ -41,11 +41,7 @@ public class TokenService {
         String familyId = UUID.randomUUID().toString();
 
         String accessToken =
-                jwtTokenProvider.createAccessToken(
-                        user.getUserId(),
-                        user.getEmail(),
-                        List.of("USER")
-                );
+                createAccessToken(user);
 
         String refreshToken =
                 jwtTokenProvider.createInitialRefreshToken(
@@ -142,6 +138,8 @@ public class TokenService {
 
         validateActiveUser(user);
 
+        user.rotateTokenVersion();
+
         String newRefreshToken =
                 jwtTokenProvider.createRotatedRefreshToken(
                         userId,
@@ -177,11 +175,7 @@ public class TokenService {
         );
 
         String newAccessToken =
-                jwtTokenProvider.createAccessToken(
-                        user.getUserId(),
-                        user.getEmail(),
-                        List.of("USER")
-                );
+                createAccessToken(user);
 
         return new TokenPair(
                 newAccessToken,
@@ -206,10 +200,19 @@ public class TokenService {
             String tokenId =
                     jwtTokenProvider.getTokenId(jwt);
 
+            Long userId =
+                    jwtTokenProvider.getUserId(jwt);
+
             refreshTokenRepository
                     .findByTokenIdForUpdate(tokenId)
                     .ifPresent(
                             RefreshToken::revoke
+                    );
+
+            userRepository
+                    .findById(userId)
+                    .ifPresent(
+                            User::rotateTokenVersion
                     );
 
         } catch (JwtException | IllegalArgumentException exception) {
@@ -223,6 +226,23 @@ public class TokenService {
     ) {
         refreshTokenRepository.revokeAllByUserId(
                 userId
+        );
+
+        userRepository
+                .findById(userId)
+                .ifPresent(
+                        User::rotateTokenVersion
+                );
+    }
+
+    private String createAccessToken(
+            User user
+    ) {
+        return jwtTokenProvider.createAccessToken(
+                user.getUserId(),
+                user.getEmail(),
+                List.of("USER"),
+                user.getTokenVersion()
         );
     }
 

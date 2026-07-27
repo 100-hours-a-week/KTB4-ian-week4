@@ -67,6 +67,12 @@ public class UserController {
                                 )
                                 .toString()
                 )
+                .header(
+                        HttpHeaders.SET_COOKIE,
+                        jwtCookieProvider
+                                .createAccessExpirationCookie()
+                                .toString()
+                )
                 .body(new SignupResponse(user.getUserId()));
     }
 
@@ -95,6 +101,12 @@ public class UserController {
                                 .createRefreshCookie(
                                         tokenPair.refreshToken()
                                 )
+                                .toString()
+                )
+                .header(
+                        HttpHeaders.SET_COOKIE,
+                        jwtCookieProvider
+                                .createAccessExpirationCookie()
                                 .toString()
                 )
                 .body(new LoginResponse(user.getUserId()));
@@ -128,6 +140,12 @@ public class UserController {
                                 )
                                 .toString()
                 )
+                .header(
+                        HttpHeaders.SET_COOKIE,
+                        jwtCookieProvider
+                                .createAccessExpirationCookie()
+                                .toString()
+                )
                 .build();
     }
 
@@ -152,6 +170,12 @@ public class UserController {
                         HttpHeaders.SET_COOKIE,
                         jwtCookieProvider
                                 .deleteRefreshCookie()
+                                .toString()
+                )
+                .header(
+                        HttpHeaders.SET_COOKIE,
+                        jwtCookieProvider
+                                .deleteAccessExpirationCookie()
                                 .toString()
                 )
                 .build();
