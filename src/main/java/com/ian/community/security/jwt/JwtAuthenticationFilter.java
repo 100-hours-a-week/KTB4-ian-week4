@@ -3,6 +3,8 @@ package com.ian.community.security.jwt;
 import com.ian.community.common.exception.ErrorCode;
 import com.ian.community.security.handler.CustomAuthenticationEntryPoint;
 import com.ian.community.security.principal.AuthenticatedUser;
+import com.ian.community.user.domain.User;
+import com.ian.community.user.repository.UserRepository;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.Cookie;
@@ -28,11 +30,14 @@ public class JwtAuthenticationFilter
         extends OncePerRequestFilter {
 
     private final JwtTokenProvider jwtTokenProvider;
+    private final UserRepository userRepository;
 
     public JwtAuthenticationFilter(
-            JwtTokenProvider jwtTokenProvider
+            JwtTokenProvider jwtTokenProvider,
+            UserRepository userRepository
     ) {
         this.jwtTokenProvider = jwtTokenProvider;
+        this.userRepository = userRepository;
     }
 
     @Override
@@ -79,6 +84,8 @@ public class JwtAuthenticationFilter
                     accessToken
             );
 
+            validateTokenVersion(jwt);
+
             AuthenticatedUser authenticatedUser =
                     createAuthenticatedUser(jwt);
 
@@ -106,11 +113,48 @@ public class JwtAuthenticationFilter
 
             request.setAttribute(
                     CustomAuthenticationEntryPoint.ERROR_CODE_ATTRIBUTE,
-                    ErrorCode.INVALID_ACCESS_TOKEN
+                    resolveErrorCode(exception)
             );
         }
 
         filterChain.doFilter(request, response);
+    }
+
+    private void validateTokenVersion(
+            Jwt jwt
+    ) {
+        Long userId = jwtTokenProvider.getUserId(jwt);
+
+        User user = userRepository
+                .findById(userId)
+                .orElseThrow(() ->
+                        new JwtException(
+                                "Access Token 사용자를 찾을 수 없습니다."
+                        )
+                );
+
+        long tokenVersion =
+                jwtTokenProvider.getTokenVersion(jwt);
+
+        if (user.getTokenVersion() != tokenVersion) {
+            throw new JwtException(
+                    "폐기된 Access Token입니다."
+            );
+        }
+    }
+
+    private ErrorCode resolveErrorCode(
+            Exception exception
+    ) {
+        String message = exception.getMessage();
+
+        if (message != null
+                && message.toLowerCase()
+                .contains("expired")) {
+            return ErrorCode.EXPIRED_ACCESS_TOKEN;
+        }
+
+        return ErrorCode.INVALID_ACCESS_TOKEN;
     }
 
     private AuthenticatedUser createAuthenticatedUser(
