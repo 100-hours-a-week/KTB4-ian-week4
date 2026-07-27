@@ -91,7 +91,7 @@ public class PostController {
                 .map(post -> new PostResponse(
                         post,
                         postService.getPostImageUrl(post),
-                        postBookmarkService.isBookmarked(
+                        postBookmarkService.existsBookmark(
                                 authenticatedUser.getUserId(),
                                 post.getPostId()
                         )
@@ -108,7 +108,7 @@ public class PostController {
             Pageable pageable
     ) {
         Page<PostResponse> response = postBookmarkService
-                .getBookmarkedPosts(authenticatedUser.getUserId(), pageable)
+                .getBookmarkPosts(authenticatedUser.getUserId(), pageable)
                 .map(post -> new PostResponse(
                         post,
                         postService.getPostImageUrl(post),
@@ -138,7 +138,7 @@ public class PostController {
                     comments,
                     postService.getPostImageUrl(post),
                     postLikeService.isLiked(authenticatedUser.getUserId(), postId),
-                    postBookmarkService.isBookmarked(authenticatedUser.getUserId(), postId)
+                    postBookmarkService.existsBookmark(authenticatedUser.getUserId(), postId)
         ));
     }
 
