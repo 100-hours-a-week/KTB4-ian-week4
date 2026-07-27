@@ -195,12 +195,12 @@ public class PostController {
             @AuthenticationPrincipal AuthenticatedUser authenticatedUser,
             @PathVariable Long postId
     ) {
-        boolean bookmarked = postBookmarkService.toggleBookmark(
+        boolean bookmark = postBookmarkService.toggleBookmark(
                 authenticatedUser.getUserId(),
                 postId
         );
 
-        return ResponseEntity.ok(new PostBookmarkResponse(postId, bookmarked));
+        return ResponseEntity.ok(new PostBookmarkResponse(postId, bookmark));
     }
 
     // 댓글 작성
