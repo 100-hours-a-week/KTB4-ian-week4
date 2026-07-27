@@ -78,7 +78,8 @@ public class JwtTokenProvider {
     public String createAccessToken(
             Long userId,
             String email,
-            List<String> roles
+            List<String> roles,
+            long tokenVersion
     ) {
         Instant now = Instant.now();
 
@@ -95,6 +96,7 @@ public class JwtTokenProvider {
                 .claim("token_type", ACCESS_TOKEN_TYPE)
                 .claim("email", email)
                 .claim("roles", List.copyOf(roles))
+                .claim("token_version", tokenVersion)
                 .build();
 
         return encode(claims);
@@ -163,6 +165,19 @@ public class JwtTokenProvider {
         return roles == null
                 ? List.of()
                 : List.copyOf(roles);
+    }
+
+    public long getTokenVersion(Jwt jwt) {
+        Number tokenVersion =
+                jwt.getClaim("token_version");
+
+        if (tokenVersion == null) {
+            throw new JwtException(
+                    "Access Token 버전이 존재하지 않습니다."
+            );
+        }
+
+        return tokenVersion.longValue();
     }
 
     public String getTokenId(Jwt jwt) {
