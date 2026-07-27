@@ -42,7 +42,7 @@ public class PostBookmarkService {
         return true;
     }
 
-    public boolean isBookmarked(Long userId, Long postId) {
+    public boolean existsBookmark(Long userId, Long postId) {
         User user = getActiveUser(userId);
         Post post = getActivePost(postId);
 
@@ -51,7 +51,7 @@ public class PostBookmarkService {
                 .isPresent();
     }
 
-    public Page<Post> getBookmarkedPosts(Long userId, Pageable pageable) {
+    public Page<Post> getBookmarkPosts(Long userId, Pageable pageable) {
         User user = getActiveUser(userId);
 
         return postBookmarkRepository
