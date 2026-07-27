@@ -36,6 +36,10 @@ public enum ErrorCode {
     COMMENT_NOT_FOUND(HttpStatus.NOT_FOUND, "comment_not_found"),
     COMMENT_ALREADY_DELETED(HttpStatus.CONFLICT, "comment_already_deleted"),
 
+    // 북마크
+    BOOKMARK_ALREADY_EXISTS(HttpStatus.CONFLICT, "bookmark_already_exists"),
+    BOOKMARK_OPERATION_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "bookmark_operation_failed"),
+
     // 인증 인가
     UNAUTHORIZED(HttpStatus.UNAUTHORIZED, "unauthorized"), // 로그인 안 했을 때
     FORBIDDEN(HttpStatus.FORBIDDEN, "forbidden"), // 로그인은 했지만 권한 없을 때
