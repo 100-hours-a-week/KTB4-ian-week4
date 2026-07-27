@@ -50,6 +50,9 @@ public class User {
     @Column(name = "deleted_at")
     private LocalDateTime deletedAt;
 
+    @Column(name = "token_version", nullable = false)
+    private long tokenVersion;
+
     public User(String email, String password, String nickname) {
         this.email = email;
         this.password = password;
@@ -61,6 +64,7 @@ public class User {
         this.profileUpdatedAt = null;
         this.userDeleted = false;
         this.deletedAt = null;
+        this.tokenVersion = 0L;
     }
 
     public void updateNickname(String nickname) {
@@ -71,11 +75,16 @@ public class User {
     public void updatePassword(String password) {
         this.password = password;
         this.passwordUpdatedAt = LocalDateTime.now(ZoneId.of("Asia/Seoul"));
+        rotateTokenVersion();
     }
 
     public void updateProfile(String profileImage) {
         this.profileImage = profileImage;
         this.profileUpdatedAt = LocalDateTime.now(ZoneId.of("Asia/Seoul"));
+    }
+
+    public void rotateTokenVersion() {
+        this.tokenVersion++;
     }
 
     public void delete() {
@@ -85,5 +94,6 @@ public class User {
         this.profileImage = DEFAULT_PROFILE_IMAGE;
         this.userDeleted = true;
         this.deletedAt = LocalDateTime.now(ZoneId.of("Asia/Seoul"));
+        rotateTokenVersion();
     }
 }
