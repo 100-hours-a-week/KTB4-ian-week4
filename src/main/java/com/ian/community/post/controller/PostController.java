@@ -7,13 +7,13 @@ import com.ian.community.post.dto.request.PostCommentCreateRequest;
 import com.ian.community.post.dto.request.PostCommentUpdateRequest;
 import com.ian.community.post.dto.request.PostCreateRequest;
 import com.ian.community.post.dto.request.PostUpdateRequest;
-import com.ian.community.post.dto.response.PostBookmarkResponse;
+import com.ian.community.post.dto.response.BookmarkResponse;
 import com.ian.community.post.dto.response.PostCommentResponse;
 import com.ian.community.post.dto.response.PostDetailResponse;
 import com.ian.community.post.dto.response.PostLikeResponse;
 import com.ian.community.post.dto.response.PostResponse;
+import com.ian.community.post.service.BookmarkService;
 import com.ian.community.post.service.CommentService;
-import com.ian.community.post.service.PostBookmarkService;
 import com.ian.community.post.service.PostLikeService;
 import com.ian.community.post.service.PostService;
 import com.ian.community.security.principal.AuthenticatedUser;
@@ -35,26 +35,26 @@ public class PostController {
     private final PostService postService;
     private final CommentService commentService;
     private final PostLikeService postLikeService;
-    private final PostBookmarkService postBookmarkService;
+    private final BookmarkService bookmarkService;
     private final LocalImageStorageService imageStorageService;
 
     public PostController(
             PostService postService,
             CommentService commentService,
             PostLikeService postLikeService,
-            PostBookmarkService postBookmarkService,
+            BookmarkService bookmarkService,
             LocalImageStorageService imageStorageService) {
         this.postService = postService;
         this.commentService = commentService;
         this.postLikeService = postLikeService;
-        this.postBookmarkService = postBookmarkService;
+        this.bookmarkService = bookmarkService;
         this.imageStorageService = imageStorageService;
     }
 
     @PostMapping(value = "/{userId}", consumes = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<Long> createPost(
             @AuthenticationPrincipal AuthenticatedUser authenticatedUser,
-            @Valid  @RequestBody PostCreateRequest request
+            @Valid @RequestBody PostCreateRequest request
     ) {
         Long postId = postService.createPost(
                 authenticatedUser.getUserId(),
@@ -91,7 +91,7 @@ public class PostController {
                 .map(post -> new PostResponse(
                         post,
                         postService.getPostImageUrl(post),
-                        postBookmarkService.existsBookmark(
+                        bookmarkService.existsBookmark(
                                 authenticatedUser.getUserId(),
                                 post.getPostId()
                         )
@@ -107,7 +107,7 @@ public class PostController {
             @AuthenticationPrincipal AuthenticatedUser authenticatedUser,
             Pageable pageable
     ) {
-        Page<PostResponse> response = postBookmarkService
+        Page<PostResponse> response = bookmarkService
                 .getBookmarkPosts(authenticatedUser.getUserId(), pageable)
                 .map(post -> new PostResponse(
                         post,
@@ -134,12 +134,12 @@ public class PostController {
 
         return ResponseEntity
                 .ok(PostDetailResponse.from(
-                    post,
-                    comments,
-                    postService.getPostImageUrl(post),
-                    postLikeService.isLiked(authenticatedUser.getUserId(), postId),
-                    postBookmarkService.existsBookmark(authenticatedUser.getUserId(), postId)
-        ));
+                        post,
+                        comments,
+                        postService.getPostImageUrl(post),
+                        postLikeService.isLiked(authenticatedUser.getUserId(), postId),
+                        bookmarkService.existsBookmark(authenticatedUser.getUserId(), postId)
+                ));
     }
 
     // 게시물 수정
@@ -191,16 +191,16 @@ public class PostController {
 
     // 게시글 북마크
     @PostMapping("/{postId}/bookmarks")
-    public ResponseEntity<PostBookmarkResponse> toggleBookmark(
+    public ResponseEntity<BookmarkResponse> toggleBookmark(
             @AuthenticationPrincipal AuthenticatedUser authenticatedUser,
             @PathVariable Long postId
     ) {
-        boolean bookmark = postBookmarkService.toggleBookmark(
+        boolean bookmark = bookmarkService.toggleBookmark(
                 authenticatedUser.getUserId(),
                 postId
         );
 
-        return ResponseEntity.ok(new PostBookmarkResponse(postId, bookmark));
+        return ResponseEntity.ok(new BookmarkResponse(postId, bookmark));
     }
 
     // 댓글 작성
@@ -251,7 +251,8 @@ public class PostController {
         commentService.deleteComment(
                 authenticatedUser.getUserId(),
                 postId,
-                commentId);
+                commentId
+        );
 
         return ResponseEntity.noContent().build();
     }
