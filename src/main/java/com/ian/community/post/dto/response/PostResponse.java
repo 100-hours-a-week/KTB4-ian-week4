@@ -42,11 +42,17 @@ public class PostResponse {
     @JsonProperty("image_url")
     private String imageUrl;
 
+    private boolean bookmark;
+
     public PostResponse(Post post) {
-        this(post, null);
+        this(post, null, false);
     }
 
     public PostResponse(Post post, String imageUrl) {
+        this(post, imageUrl, false);
+    }
+
+    public PostResponse(Post post, String imageUrl, boolean bookmark) {
         this.postId = post.getPostId();
         this.content = post.getContent();
         this.authorName = post.getAuthorUser().getNickname();
@@ -58,5 +64,6 @@ public class PostResponse {
         this.updatedAt = post.getUpdatedAt();
         this.postDeleted = post.isPostDeleted();
         this.imageUrl = imageUrl;
+        this.bookmark = bookmark;
     }
 }
