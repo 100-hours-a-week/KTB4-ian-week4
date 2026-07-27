@@ -20,6 +20,8 @@ import com.ian.community.security.principal.AuthenticatedUser;
 import jakarta.validation.Valid;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Slice;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -103,11 +105,11 @@ public class PostController {
 
     // 내 북마크 목록 조회
     @GetMapping("/bookmarks")
-    public ResponseEntity<ApiResponse<Page<PostResponse>>> findBookmarks(
+    public ResponseEntity<ApiResponse<Slice<PostResponse>>> findBookmarks(
             @AuthenticationPrincipal AuthenticatedUser authenticatedUser,
-            Pageable pageable
+            @PageableDefault(size = 10) Pageable pageable
     ) {
-        Page<PostResponse> response = bookmarkService
+        Slice<PostResponse> response = bookmarkService
                 .getBookmarkPosts(authenticatedUser.getUserId(), pageable)
                 .map(post -> new PostResponse(
                         post,
