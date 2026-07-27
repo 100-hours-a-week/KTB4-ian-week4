@@ -9,8 +9,9 @@ import com.ian.community.post.repository.PostRepository;
 import com.ian.community.user.domain.User;
 import com.ian.community.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Page;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Slice;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -38,8 +39,14 @@ public class BookmarkService {
             return false;
         }
 
-        bookmarkRepository.save(new Bookmark(user, post));
-        return true;
+        try {
+            bookmarkRepository.save(new Bookmark(user, post));
+            return true;
+        } catch (DataIntegrityViolationException exception) {
+            throw new CustomException(ErrorCode.BOOKMARK_ALREADY_EXISTS);
+        } catch (RuntimeException exception) {
+            throw new CustomException(ErrorCode.BOOKMARK_OPERATION_FAILED);
+        }
     }
 
     public boolean existsBookmark(Long userId, Long postId) {
@@ -49,7 +56,7 @@ public class BookmarkService {
         return bookmarkRepository.findByUserAndPost(user, post).isPresent();
     }
 
-    public Page<Post> getBookmarkPosts(Long userId, Pageable pageable) {
+    public Slice<Post> getBookmarkPosts(Long userId, Pageable pageable) {
         User user = getActiveUser(userId);
 
         return bookmarkRepository
