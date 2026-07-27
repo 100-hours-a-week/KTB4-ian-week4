@@ -7,5 +7,5 @@ import lombok.Getter;
 @AllArgsConstructor
 public class PostBookmarkResponse {
     private Long postId;
-    private boolean bookmarked;
+    private boolean bookmark;
 }
