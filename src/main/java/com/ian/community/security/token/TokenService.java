@@ -85,6 +85,9 @@ public class TokenService {
         );
     }
 
+    @Transactional(
+        noRollbackFor = CustomException.class
+    )
     public TokenPair rotate(
             String rawRefreshToken
     ) {

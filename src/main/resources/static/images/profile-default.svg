@@ -1,6 +1,5 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" role="img" aria-labelledby="title">
-  <title id="title">기본 프로필 이미지</title>
-  <rect width="120" height="120" rx="60" fill="#d9d9d9"/>
-  <circle cx="60" cy="44" r="20" fill="#a8a8a8"/>
-  <path d="M24 104c4-24 18-36 36-36s32 12 36 36" fill="#a8a8a8"/>
+<svg width="160" height="160" viewBox="0 0 160 160" fill="none" xmlns="http://www.w3.org/2000/svg">
+<rect width="160" height="160" rx="80" fill="white"/>
+<rect width="160" height="160" rx="80" fill="#5B5CEB" fill-opacity="0.1"/>
+<path d="M87.9444 94C87.9444 89.5367 84.3426 86 80 86C75.6574 86 72.0556 89.5367 72.0556 94C72.0556 105.046 63.0889 114 52.0278 114C40.9668 114 32 105.046 32 94C32 67.5353 53.4453 46 80 46C106.555 46 128 67.5353 128 94C128 105.046 119.033 114 107.972 114C96.9111 114 87.9444 105.046 87.9444 94Z" fill="#5B5CEB"/>
 </svg>

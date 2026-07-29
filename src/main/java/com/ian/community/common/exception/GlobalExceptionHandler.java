@@ -43,20 +43,34 @@ public class GlobalExceptionHandler {
                 .getBindingResult()
                 .getFieldErrors()
                 .stream()
-                .sorted(java.util.Comparator.comparingInt(
-                        GlobalExceptionHandler::validationPriority
-                ))
+                .sorted(
+                        java.util.Comparator
+                                .comparingInt(
+                                        GlobalExceptionHandler
+                                                ::validationPriority
+                                )
+                                .thenComparing(
+                                        FieldError::getField
+                                )
+                                .thenComparing(error ->
+                                        java.util.Objects.toString(
+                                                error.getCode(),
+                                                ""
+                                        )
+                                )
+                                .thenComparing(error ->
+                                        java.util.Objects.toString(
+                                                error.getDefaultMessage(),
+                                                ""
+                                        )
+                                )
+                )
                 .map(ObjectError::getDefaultMessage)
-                .filter(value -> value != null && !value.isBlank())
+                .filter(value ->
+                        value != null && !value.isBlank()
+                )
                 .findFirst()
-                .orElseGet(() -> exception
-                        .getBindingResult()
-                        .getGlobalErrors()
-                        .stream()
-                        .map(ObjectError::getDefaultMessage)
-                        .filter(value -> value != null && !value.isBlank())
-                        .findFirst()
-                        .orElse(ErrorCode.INVALID_REQUEST.getMessage()));
+                .orElse("입력값을 확인해주세요.");
 
         return ResponseEntity
                 .badRequest()

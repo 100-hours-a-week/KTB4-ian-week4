@@ -36,6 +36,26 @@ import java.util.Set;
 @RestController
 @RequestMapping("/api/posts")
 public class PostController {
+    private static final String POST_LIST_FOUND_CODE =
+            "POST_LIST_FOUND";
+    private static final String POST_LIST_FOUND_MESSAGE =
+            "피드 목록을 조회했습니다.";
+
+    private static final String NO_MORE_POSTS_CODE =
+            "NO_MORE_POSTS";
+    private static final String NO_MORE_POSTS_MESSAGE =
+            "더 이상 조회할 피드가 없습니다.";
+
+    private static final String BOOKMARK_LIST_FOUND_CODE =
+            "BOOKMARK_LIST_FOUND";
+    private static final String BOOKMARK_LIST_FOUND_MESSAGE =
+            "북마크 목록을 조회했습니다.";
+
+    private static final String NO_MORE_BOOKMARKS_CODE =
+            "NO_MORE_BOOKMARKS";
+    private static final String NO_MORE_BOOKMARKS_MESSAGE =
+            "더 이상 조회할 북마크가 없습니다.";
+
     private final PostService postService;
     private final CommentService commentService;
     private final PostLikeService postLikeService;
@@ -103,17 +123,34 @@ public class PostController {
                                 .toList()
                 );
 
-        Slice<PostResponse> response = posts
-                .map(post -> new PostResponse(
+        Slice<PostResponse> response = posts.map(
+                post -> new PostResponse(
                         post,
                         postService.getPostImageUrl(post),
-                        bookmarkedPostIds.contains(post.getPostId())
-                ));
+                        bookmarkedPostIds.contains(
+                                post.getPostId()
+                        )
+                )
+        );
+
+        boolean hasNext = response.hasNext();
+
+        String code = hasNext
+                ? POST_LIST_FOUND_CODE
+                : NO_MORE_POSTS_CODE;
+
+        String message = hasNext
+                ? POST_LIST_FOUND_MESSAGE
+                : NO_MORE_POSTS_MESSAGE;
 
         return ResponseEntity.ok(
                 new ApiResponse<>(
-                        "post_list_found",
-                        SliceResponse.from(response)
+                        code,
+                        message,
+                        SliceResponse.from(
+                                response,
+                                NO_MORE_POSTS_MESSAGE
+                        )
                 )
         );
     }
@@ -297,10 +334,24 @@ public class PostController {
                         true
                 ));
 
+        boolean hasNext = response.hasNext();
+
+        String code = hasNext
+                ? BOOKMARK_LIST_FOUND_CODE
+                : NO_MORE_BOOKMARKS_CODE;
+
+        String message = hasNext
+                ? BOOKMARK_LIST_FOUND_MESSAGE
+                : NO_MORE_BOOKMARKS_MESSAGE;
+
         return ResponseEntity.ok(
                 new ApiResponse<>(
-                        "bookmark_list_found",
-                        SliceResponse.from(response)
+                        code,
+                        message,
+                        SliceResponse.from(
+                                response,
+                                NO_MORE_BOOKMARKS_MESSAGE
+                        )
                 )
         );
     }
