@@ -104,7 +104,8 @@ public class PostController {
                         postService.getPostImageUrl(post),
                         bookmarkedPostIds.contains(
                                 post.getPostId()
-                        )
+                        ),
+                        authenticatedUser.getUserId()
                 )
         );
 
@@ -150,7 +151,8 @@ public class PostController {
                         bookmarkService.existsBookmark(
                                 authenticatedUser.getUserId(),
                                 postId
-                        )
+                        ),
+                        authenticatedUser.getUserId()
                 )
         );
     }
@@ -308,7 +310,8 @@ public class PostController {
                 .map(post -> new PostResponse(
                         post,
                         postService.getPostImageUrl(post),
-                        true
+                        true,
+                        authenticatedUser.getUserId()
                 ));
 
         boolean hasNext = response.hasNext();
