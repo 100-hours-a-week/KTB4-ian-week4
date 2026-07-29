@@ -7,12 +7,7 @@ import com.ian.community.post.dto.request.PostCommentCreateRequest;
 import com.ian.community.post.dto.request.PostCommentUpdateRequest;
 import com.ian.community.post.dto.request.PostCreateRequest;
 import com.ian.community.post.dto.request.PostUpdateRequest;
-import com.ian.community.post.dto.response.PostCommentResponse;
-import com.ian.community.post.dto.response.BookmarkResponse;
-import com.ian.community.post.dto.response.PostDetailResponse;
-import com.ian.community.post.dto.response.PostLikeResponse;
-import com.ian.community.post.dto.response.PostResponse;
-import com.ian.community.post.dto.response.SliceResponse;
+import com.ian.community.post.dto.response.*;
 import com.ian.community.post.service.CommentService;
 import com.ian.community.post.service.BookmarkService;
 import com.ian.community.post.service.PostLikeService;
@@ -36,26 +31,6 @@ import java.util.Set;
 @RestController
 @RequestMapping("/api/posts")
 public class PostController {
-    private static final String POST_LIST_FOUND_CODE =
-            "POST_LIST_FOUND";
-    private static final String POST_LIST_FOUND_MESSAGE =
-            "피드 목록을 조회했습니다.";
-
-    private static final String NO_MORE_POSTS_CODE =
-            "NO_MORE_POSTS";
-    private static final String NO_MORE_POSTS_MESSAGE =
-            "더 이상 조회할 피드가 없습니다.";
-
-    private static final String BOOKMARK_LIST_FOUND_CODE =
-            "BOOKMARK_LIST_FOUND";
-    private static final String BOOKMARK_LIST_FOUND_MESSAGE =
-            "북마크 목록을 조회했습니다.";
-
-    private static final String NO_MORE_BOOKMARKS_CODE =
-            "NO_MORE_BOOKMARKS";
-    private static final String NO_MORE_BOOKMARKS_MESSAGE =
-            "더 이상 조회할 북마크가 없습니다.";
-
     private final PostService postService;
     private final CommentService commentService;
     private final PostLikeService postLikeService;
@@ -135,21 +110,16 @@ public class PostController {
 
         boolean hasNext = response.hasNext();
 
-        String code = hasNext
-                ? POST_LIST_FOUND_CODE
-                : NO_MORE_POSTS_CODE;
-
-        String message = hasNext
-                ? POST_LIST_FOUND_MESSAGE
-                : NO_MORE_POSTS_MESSAGE;
+        PostSuccessCode successCode = hasNext
+                ? PostSuccessCode.POST_LIST_FOUND
+                : PostSuccessCode.NO_MORE_POSTS;
 
         return ResponseEntity.ok(
-                new ApiResponse<>(
-                        code,
-                        message,
+                ApiResponse.success(
+                        successCode,
                         SliceResponse.from(
                                 response,
-                                NO_MORE_POSTS_MESSAGE
+                                PostSuccessCode.NO_MORE_POSTS.getMessage()
                         )
                 )
         );
@@ -286,17 +256,24 @@ public class PostController {
     }
 
     @PostMapping("/{postId}/bookmarks")
-    public ResponseEntity<BookmarkResponse> addBookmark(
+    public ResponseEntity<ApiResponse<BookmarkResponse>> addBookmark(
             @AuthenticationPrincipal AuthenticatedUser authenticatedUser,
             @PathVariable Long postId
     ) {
-        bookmarkService.addBookmark(
+        boolean created = bookmarkService.addBookmark(
                 authenticatedUser.getUserId(),
                 postId
         );
 
-        return ResponseEntity.ok(
-                new BookmarkResponse(postId, true)
+        BookmarkSuccessCode successCode = created
+                ? BookmarkSuccessCode.BOOKMARK_CREATED
+                : BookmarkSuccessCode.BOOKMARK_ALREADY_SAVED;
+
+        return ResponseEntity.status(successCode.getStatus()).body(
+                ApiResponse.success(
+                        successCode,
+                        new BookmarkResponse(postId, true)
+                )
         );
     }
 
@@ -336,21 +313,16 @@ public class PostController {
 
         boolean hasNext = response.hasNext();
 
-        String code = hasNext
-                ? BOOKMARK_LIST_FOUND_CODE
-                : NO_MORE_BOOKMARKS_CODE;
-
-        String message = hasNext
-                ? BOOKMARK_LIST_FOUND_MESSAGE
-                : NO_MORE_BOOKMARKS_MESSAGE;
+        BookmarkSuccessCode successCode = hasNext
+                ? BookmarkSuccessCode.BOOKMARK_LIST_FOUND
+                : BookmarkSuccessCode.NO_MORE_BOOKMARKS;
 
         return ResponseEntity.ok(
-                new ApiResponse<>(
-                        code,
-                        message,
+                ApiResponse.success(
+                        successCode,
                         SliceResponse.from(
                                 response,
-                                NO_MORE_BOOKMARKS_MESSAGE
+                                BookmarkSuccessCode.NO_MORE_BOOKMARKS.getMessage()
                         )
                 )
         );
@@ -359,7 +331,7 @@ public class PostController {
     private Pageable limitPageSize(Pageable pageable) {
         return PageRequest.of(
                 Math.max(pageable.getPageNumber(), 0),
-                Math.min(Math.max(pageable.getPageSize(), 1), 100)
+                Math.min(Math.max(pageable.getPageSize(), 1), 10)
         );
     }
 }

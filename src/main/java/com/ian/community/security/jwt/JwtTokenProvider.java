@@ -79,7 +79,8 @@ public class JwtTokenProvider {
     public String createAccessToken(
             Long userId,
             String email,
-            List<String> roles
+            List<String> roles,
+            String familyId
     ) {
         Instant now = Instant.now();
 
@@ -94,6 +95,7 @@ public class JwtTokenProvider {
                 )
                 .id(UUID.randomUUID().toString())
                 .claim("token_type", ACCESS_TOKEN_TYPE)
+                .claim("family_id", familyId)
                 .claim("email", email)
                 .claim("roles", List.copyOf(roles))
                 .build();

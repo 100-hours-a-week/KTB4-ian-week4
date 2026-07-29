@@ -5,6 +5,8 @@ import com.ian.community.common.exception.ErrorCode;
 import com.ian.community.security.jwt.JwtTokenProvider;
 import com.ian.community.security.refresh.RefreshToken;
 import com.ian.community.security.refresh.RefreshTokenRepository;
+import com.ian.community.security.session.TokenFamilySession;
+import com.ian.community.security.session.TokenFamilySessionRepository;
 import com.ian.community.user.domain.User;
 import com.ian.community.user.repository.UserRepository;
 import org.springframework.security.oauth2.jwt.Jwt;
@@ -21,15 +23,18 @@ public class TokenService {
 
     private final JwtTokenProvider jwtTokenProvider;
     private final RefreshTokenRepository refreshTokenRepository;
+    private final TokenFamilySessionRepository tokenFamilySessionRepository;
     private final UserRepository userRepository;
 
     public TokenService(
             JwtTokenProvider jwtTokenProvider,
             RefreshTokenRepository refreshTokenRepository,
+            TokenFamilySessionRepository tokenFamilySessionRepository,
             UserRepository userRepository
     ) {
         this.jwtTokenProvider = jwtTokenProvider;
         this.refreshTokenRepository = refreshTokenRepository;
+        this.tokenFamilySessionRepository = tokenFamilySessionRepository;
         this.userRepository = userRepository;
     }
 
@@ -44,7 +49,8 @@ public class TokenService {
                 jwtTokenProvider.createAccessToken(
                         user.getUserId(),
                         user.getEmail(),
-                        List.of("USER")
+                        List.of("USER"),
+                        familyId
                 );
 
         String refreshToken =
@@ -76,6 +82,14 @@ public class TokenService {
 
         refreshTokenRepository.save(
                 refreshTokenEntity
+        );
+
+        tokenFamilySessionRepository.save(
+                new TokenFamilySession(
+                        familyId,
+                        user.getUserId(),
+                        jwtTokenProvider.getTokenId(accessJwt)
+                )
         );
 
         return new TokenPair(
@@ -150,6 +164,23 @@ public class TokenService {
 
         validateActiveUser(user);
 
+        TokenFamilySession familySession =
+                tokenFamilySessionRepository
+                        .findByFamilyIdForUpdate(familyId)
+                        .orElseThrow(() ->
+                                new CustomException(
+                                        ErrorCode.INVALID_REFRESH_TOKEN
+                                )
+                        );
+
+        if (familySession.isRevoked()
+                || !familySession.getUserId().equals(userId)) {
+            revokeFamily(familyId);
+            throw new CustomException(
+                    ErrorCode.REFRESH_TOKEN_REUSED
+            );
+        }
+
         String newRefreshToken =
                 jwtTokenProvider.createRotatedRefreshToken(
                         userId,
@@ -188,11 +219,16 @@ public class TokenService {
                 jwtTokenProvider.createAccessToken(
                         user.getUserId(),
                         user.getEmail(),
-                        List.of("USER")
+                        List.of("USER"),
+                        familyId
                 );
 
         Jwt newAccessJwt = jwtTokenProvider.decodeAccessToken(
                 newAccessToken
+        );
+
+        familySession.rotateAccessToken(
+                jwtTokenProvider.getTokenId(newAccessJwt)
         );
 
         return new TokenPair(
@@ -221,8 +257,8 @@ public class TokenService {
 
             refreshTokenRepository
                     .findByTokenIdForUpdate(tokenId)
-                    .ifPresent(
-                            RefreshToken::revoke
+                    .ifPresent(token ->
+                            revokeFamily(token.getFamilyId())
                     );
 
         } catch (JwtException | IllegalArgumentException exception) {
@@ -237,6 +273,24 @@ public class TokenService {
         refreshTokenRepository.revokeAllByUserId(
                 userId
         );
+        tokenFamilySessionRepository.revokeAllByUserId(userId);
+    }
+
+    @Transactional(readOnly = true)
+    public void validateAccessToken(Jwt accessJwt) {
+        String familyId = jwtTokenProvider.getFamilyId(accessJwt);
+        Long userId = jwtTokenProvider.getUserId(accessJwt);
+        String accessTokenId = jwtTokenProvider.getTokenId(accessJwt);
+
+        TokenFamilySession session = tokenFamilySessionRepository
+                .findById(familyId)
+                .orElseThrow(() ->
+                        new JwtException("Access Token family가 존재하지 않습니다.")
+                );
+
+        if (!session.accepts(userId, accessTokenId)) {
+            throw new JwtException("현재 활성 Access Token이 아닙니다.");
+        }
     }
 
     private Jwt decodeRefreshTokenOrThrow(
@@ -271,9 +325,7 @@ public class TokenService {
             Long userId
     ) {
         if (!savedToken.getUserId().equals(userId)) {
-            refreshTokenRepository.revokeAllByFamilyId(
-                    savedToken.getFamilyId()
-            );
+            revokeFamily(savedToken.getFamilyId());
 
             throw new CustomException(
                     ErrorCode.REFRESH_TOKEN_USER_MISMATCH
@@ -286,9 +338,7 @@ public class TokenService {
             String familyId
     ) {
         if (!savedToken.getFamilyId().equals(familyId)) {
-            refreshTokenRepository.revokeAllByFamilyId(
-                    savedToken.getFamilyId()
-            );
+            revokeFamily(savedToken.getFamilyId());
 
             throw new CustomException(
                     ErrorCode.REFRESH_TOKEN_FAMILY_MISMATCH
@@ -300,9 +350,7 @@ public class TokenService {
             RefreshToken savedToken
     ) {
         if (savedToken.isRevoked()) {
-            refreshTokenRepository.revokeAllByFamilyId(
-                    savedToken.getFamilyId()
-            );
+            revokeFamily(savedToken.getFamilyId());
 
             throw new CustomException(
                     ErrorCode.REFRESH_TOKEN_REUSED
@@ -330,5 +378,10 @@ public class TokenService {
                     ErrorCode.USER_ALREADY_DELETED
             );
         }
+    }
+
+    private void revokeFamily(String familyId) {
+        refreshTokenRepository.revokeAllByFamilyId(familyId);
+        tokenFamilySessionRepository.revokeByFamilyId(familyId);
     }
 }

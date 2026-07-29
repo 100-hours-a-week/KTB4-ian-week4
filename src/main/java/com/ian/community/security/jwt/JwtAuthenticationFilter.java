@@ -3,6 +3,7 @@ package com.ian.community.security.jwt;
 import com.ian.community.common.exception.ErrorCode;
 import com.ian.community.security.handler.CustomAuthenticationEntryPoint;
 import com.ian.community.security.principal.AuthenticatedUser;
+import com.ian.community.security.token.TokenService;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.Cookie;
@@ -28,11 +29,14 @@ public class JwtAuthenticationFilter
         extends OncePerRequestFilter {
 
     private final JwtTokenProvider jwtTokenProvider;
+    private final TokenService tokenService;
 
     public JwtAuthenticationFilter(
-            JwtTokenProvider jwtTokenProvider
+            JwtTokenProvider jwtTokenProvider,
+            TokenService tokenService
     ) {
         this.jwtTokenProvider = jwtTokenProvider;
+        this.tokenService = tokenService;
     }
 
     @Override
@@ -78,6 +82,8 @@ public class JwtAuthenticationFilter
             Jwt jwt = jwtTokenProvider.decodeAccessToken(
                     accessToken
             );
+
+            tokenService.validateAccessToken(jwt);
 
             AuthenticatedUser authenticatedUser =
                     createAuthenticatedUser(jwt);

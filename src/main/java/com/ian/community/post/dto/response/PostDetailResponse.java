@@ -16,6 +16,9 @@ public class PostDetailResponse {
 
     private String content;
 
+    @JsonProperty("user_id")
+    private Long userId;
+
     @JsonProperty("image_url")
     private String imageUrl;
 
@@ -48,6 +51,7 @@ public class PostDetailResponse {
     private PostDetailResponse(Post post) {
         this.postId = post.getPostId();
         this.content = post.getContent();
+        this.userId = post.getAuthorUser().getUserId();
         this.nickname = post.getAuthorUser().getNickname();
         this.profileImage = post.getAuthorUser().getProfileImage();
         this.likeCount = post.getLikeCount();

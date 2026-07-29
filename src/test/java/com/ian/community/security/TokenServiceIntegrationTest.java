@@ -4,6 +4,7 @@ import com.ian.community.common.exception.CustomException;
 import com.ian.community.common.exception.ErrorCode;
 import com.ian.community.security.refresh.RefreshToken;
 import com.ian.community.security.refresh.RefreshTokenRepository;
+import com.ian.community.security.jwt.JwtTokenProvider;
 import com.ian.community.security.token.TokenPair;
 import com.ian.community.security.token.TokenService;
 import com.ian.community.user.domain.User;
@@ -33,6 +34,9 @@ class TokenServiceIntegrationTest {
     @Autowired
     private RefreshTokenRepository refreshTokenRepository;
 
+    @Autowired
+    private JwtTokenProvider jwtTokenProvider;
+
     private User user;
 
     @BeforeEach
@@ -61,6 +65,31 @@ class TokenServiceIntegrationTest {
                 .hasSize(2)
                 .extracting(RefreshToken::isRevoked)
                 .containsExactlyInAnyOrder(true, false);
+
+        assertThatThrownBy(() -> tokenService.validateAccessToken(
+                jwtTokenProvider.decodeAccessToken(initial.accessToken())
+        )).isInstanceOf(org.springframework.security.oauth2.jwt.JwtException.class);
+
+        tokenService.validateAccessToken(
+                jwtTokenProvider.decodeAccessToken(rotated.accessToken())
+        );
+    }
+
+    @Test
+    @DisplayName("서로 다른 로그인 기기의 Token family는 독립적으로 유지된다")
+    void keepOtherDeviceFamilyActive() {
+        TokenPair firstDevice = tokenService.issueInitialTokens(user);
+        TokenPair secondDevice = tokenService.issueInitialTokens(user);
+
+        tokenService.rotate(firstDevice.refreshToken());
+
+        tokenService.validateAccessToken(
+                jwtTokenProvider.decodeAccessToken(secondDevice.accessToken())
+        );
+        TokenPair secondRotated = tokenService.rotate(secondDevice.refreshToken());
+        tokenService.validateAccessToken(
+                jwtTokenProvider.decodeAccessToken(secondRotated.accessToken())
+        );
     }
 
     @Test

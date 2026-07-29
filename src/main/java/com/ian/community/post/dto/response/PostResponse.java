@@ -15,6 +15,9 @@ public class PostResponse {
 
     private String content;
 
+    @JsonProperty("user_id")
+    private Long userId;
+
     @JsonProperty("author_name")
     private String authorName;
 
@@ -51,6 +54,7 @@ public class PostResponse {
     public PostResponse(Post post, String imageUrl, boolean bookmarked) {
         this.postId = post.getPostId();
         this.content = post.getContent();
+        this.userId = post.getAuthorUser().getUserId();
         this.authorName = post.getAuthorUser().getNickname();
         this.profileImage = post.getAuthorUser().getProfileImage();
         this.likeCount = post.getLikeCount();

@@ -17,4 +17,15 @@ public class ApiResponse<T> {
         this.message = message;
         this.data = data;
     }
+
+    public static <T> ApiResponse<T> success(
+            SuccessCode successCode,
+            T data
+    ) {
+        return new ApiResponse<>(
+                successCode.getCode(),
+                successCode.getMessage(),
+                data
+        );
+    }
 }
