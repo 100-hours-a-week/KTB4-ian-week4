@@ -53,6 +53,10 @@ public class TokenService {
                         familyId
                 );
 
+        Jwt accessJwt = jwtTokenProvider.decodeAccessToken(
+                accessToken
+        );
+
         Jwt refreshJwt =
                 decodeRefreshTokenOrThrow(
                         refreshToken
@@ -76,7 +80,8 @@ public class TokenService {
 
         return new TokenPair(
                 accessToken,
-                refreshToken
+                refreshToken,
+                jwtTokenProvider.getExpiresAt(accessJwt)
         );
     }
 
@@ -183,9 +188,14 @@ public class TokenService {
                         List.of("USER")
                 );
 
+        Jwt newAccessJwt = jwtTokenProvider.decodeAccessToken(
+                newAccessToken
+        );
+
         return new TokenPair(
                 newAccessToken,
-                newRefreshToken
+                newRefreshToken,
+                jwtTokenProvider.getExpiresAt(newAccessJwt)
         );
     }
 
@@ -241,7 +251,7 @@ public class TokenService {
                     rawRefreshToken
             );
         } catch (JwtException | IllegalArgumentException exception) {
-            if (isExpiredTokenException(exception)) {
+            if (jwtTokenProvider.isExpiredTokenException(exception)) {
                 throw new CustomException(
                         ErrorCode.EXPIRED_REFRESH_TOKEN
                 );
@@ -251,19 +261,6 @@ public class TokenService {
                     ErrorCode.INVALID_REFRESH_TOKEN
             );
         }
-    }
-
-    private boolean isExpiredTokenException(
-            Exception exception
-    ) {
-        String message = exception.getMessage();
-
-        if (message == null) {
-            return false;
-        }
-
-        return message.toLowerCase()
-                .contains("expired");
     }
 
     private void validateRefreshTokenOwner(

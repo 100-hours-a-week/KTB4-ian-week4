@@ -49,6 +49,7 @@ public class CustomAccessDeniedHandler
 
         ApiResponse<Void> body =
                 new ApiResponse<>(
+                        errorCode.getCode(),
                         errorCode.getMessage(),
                         null
                 );

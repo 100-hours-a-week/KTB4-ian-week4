@@ -4,57 +4,62 @@ import org.springframework.http.HttpStatus;
 
 public enum ErrorCode {
     // 회원
-    USER_NOT_FOUND(HttpStatus.NOT_FOUND, "user_not_found"),
-    USER_ALREADY_DELETED(HttpStatus.CONFLICT, "user_already_deleted"),
+    USER_NOT_FOUND(HttpStatus.NOT_FOUND, "사용자를 찾을 수 없습니다."),
+    USER_ALREADY_DELETED(HttpStatus.CONFLICT, "탈퇴한 사용자입니다."),
 
     // 회원가입
-    EMAIL_ALREADY_EXISTS(HttpStatus.CONFLICT, "email_already_exists"),
-    NICKNAME_ALREADY_EXISTS(HttpStatus.CONFLICT, "nickname_already_exists"),
-    INVALID_SIGNUP_REQUEST(HttpStatus.BAD_REQUEST, "invalid_signup_request"),
+    EMAIL_ALREADY_EXISTS(HttpStatus.CONFLICT, "이미 사용 중인 이메일입니다."),
+    NICKNAME_ALREADY_EXISTS(HttpStatus.CONFLICT, "이미 사용 중인 닉네임입니다."),
+    INVALID_SIGNUP_REQUEST(HttpStatus.BAD_REQUEST, "회원가입 정보를 확인해주세요."),
 
     // 로그인
-    INVALID_LOGIN_REQUEST(HttpStatus.BAD_REQUEST, "invalid_login_request"),
-    INVALID_PASSWORD(HttpStatus.BAD_REQUEST, "invalid_password"),
+    INVALID_LOGIN_REQUEST(HttpStatus.BAD_REQUEST, "이메일 또는 비밀번호를 확인해주세요."),
+    INVALID_PASSWORD(HttpStatus.BAD_REQUEST, "비밀번호를 확인해주세요."),
 
     // 비밀번호 변경
-    CURRENT_PASSWORD_MISMATCH(HttpStatus.BAD_REQUEST, "current_password_mismatch"),
-    NEW_PASSWORD_MISMATCH(HttpStatus.BAD_REQUEST, "new_password_mismatch"),
-    PASSWORD_SAME_AS_CURRENT(HttpStatus.CONFLICT, "password_same_as_current"),
+    CURRENT_PASSWORD_MISMATCH(HttpStatus.BAD_REQUEST, "현재 비밀번호가 일치하지 않습니다."),
+    NEW_PASSWORD_MISMATCH(HttpStatus.BAD_REQUEST, "새 비밀번호가 일치하지 않습니다."),
+    PASSWORD_SAME_AS_CURRENT(HttpStatus.CONFLICT, "현재 비밀번호와 다른 비밀번호를 입력해주세요."),
 
     // 게시물 작성/수정
-    INVALID_POST_REQUEST(HttpStatus.BAD_REQUEST, "invalid_post_request"),
+    INVALID_POST_REQUEST(HttpStatus.BAD_REQUEST, "게시글 정보를 확인해주세요."),
 
     // 게시글 & 댓글 수정, 댓글 삭제
-    NO_CHANGES_DETECTED(HttpStatus.CONFLICT, "no_changes_detected"),
+    NO_CHANGES_DETECTED(HttpStatus.CONFLICT, "변경된 내용이 없습니다."),
 
     // 게시글 삭제
-    POST_NOT_FOUND(HttpStatus.NOT_FOUND, "post_not_found"),
-    POST_ALREADY_DELETED(HttpStatus.CONFLICT, "post_already_deleted"),
+    POST_NOT_FOUND(HttpStatus.NOT_FOUND, "게시글을 찾을 수 없습니다."),
+    POST_ALREADY_DELETED(HttpStatus.CONFLICT, "이미 삭제된 게시글입니다."),
 
     // 댓글
-    INVALID_COMMENT_REQUEST(HttpStatus.BAD_REQUEST, "invalid_comment_request"),
-    COMMENT_NOT_FOUND(HttpStatus.NOT_FOUND, "comment_not_found"),
-    COMMENT_ALREADY_DELETED(HttpStatus.CONFLICT, "comment_already_deleted"),
+    INVALID_COMMENT_REQUEST(HttpStatus.BAD_REQUEST, "댓글 정보를 확인해주세요."),
+    COMMENT_NOT_FOUND(HttpStatus.NOT_FOUND, "댓글을 찾을 수 없습니다."),
+    COMMENT_ALREADY_DELETED(HttpStatus.CONFLICT, "이미 삭제된 댓글입니다."),
+
+    // 북마크
+    BOOKMARK_ALREADY_EXISTS(HttpStatus.CONFLICT, "이미 북마크한 게시글입니다."),
+    BOOKMARK_OPERATION_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "북마크 처리에 실패했습니다."),
 
     // 인증 인가
-    UNAUTHORIZED(HttpStatus.UNAUTHORIZED, "unauthorized"), // 로그인 안 했을 때
-    FORBIDDEN(HttpStatus.FORBIDDEN, "forbidden"), // 로그인은 했지만 권한 없을 때
+    UNAUTHORIZED(HttpStatus.UNAUTHORIZED, "로그인이 필요합니다."), // 로그인 안 했을 때
+    FORBIDDEN(HttpStatus.FORBIDDEN, "요청을 수행할 권한이 없습니다."), // 로그인은 했지만 권한 없을 때
 
-    INVALID_ACCESS_TOKEN(HttpStatus.UNAUTHORIZED, "invalid_access_token"),
-    EXPIRED_ACCESS_TOKEN(HttpStatus.UNAUTHORIZED, "expired_access_token"),
+    INVALID_ACCESS_TOKEN(HttpStatus.UNAUTHORIZED, "유효하지 않은 Access Token입니다."),
+    EXPIRED_ACCESS_TOKEN(HttpStatus.UNAUTHORIZED, "Access Token이 만료되었습니다."),
 
-    INVALID_REFRESH_TOKEN(HttpStatus.UNAUTHORIZED, "invalid_refresh_token"),
-    EXPIRED_REFRESH_TOKEN(HttpStatus.UNAUTHORIZED, "expired_refresh_token"),
-    REFRESH_TOKEN_NOT_FOUND(HttpStatus.UNAUTHORIZED, "refresh_token_not_found"),
-    REFRESH_TOKEN_REUSED(HttpStatus.UNAUTHORIZED, "refresh_token_reused"),
-    REFRESH_TOKEN_USER_MISMATCH(HttpStatus.UNAUTHORIZED, "refresh_token_user_mismatch"),
-    REFRESH_TOKEN_FAMILY_MISMATCH(HttpStatus.UNAUTHORIZED, "refresh_token_family_mismatch"),
+    INVALID_REFRESH_TOKEN(HttpStatus.UNAUTHORIZED, "유효하지 않은 Refresh Token입니다."),
+    EXPIRED_REFRESH_TOKEN(HttpStatus.UNAUTHORIZED, "Refresh Token이 만료되었습니다."),
+    REFRESH_TOKEN_NOT_FOUND(HttpStatus.UNAUTHORIZED, "Refresh Token이 없습니다."),
+    REFRESH_TOKEN_REUSED(HttpStatus.UNAUTHORIZED, "이미 사용된 Refresh Token입니다."),
+    REFRESH_TOKEN_USER_MISMATCH(HttpStatus.UNAUTHORIZED, "Refresh Token 사용자 정보가 일치하지 않습니다."),
+    REFRESH_TOKEN_FAMILY_MISMATCH(HttpStatus.UNAUTHORIZED, "Refresh Token 계열 정보가 일치하지 않습니다."),
 
     // 공통
-    IMAGE_TOO_LARGE(HttpStatus.PAYLOAD_TOO_LARGE, "image_too_large"),
-    UNSUPPORTED_IMAGE_TYPE(HttpStatus.UNSUPPORTED_MEDIA_TYPE, "unsupported_image_type"),
-    TOO_MANY_REQUESTS(HttpStatus.TOO_MANY_REQUESTS, "too_many_requests"),
-    INTERNAL_SERVER_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "internal_server_error");
+    INVALID_REQUEST(HttpStatus.BAD_REQUEST, "요청 값을 확인해주세요."),
+    IMAGE_TOO_LARGE(HttpStatus.PAYLOAD_TOO_LARGE, "이미지 크기가 너무 큽니다."),
+    UNSUPPORTED_IMAGE_TYPE(HttpStatus.UNSUPPORTED_MEDIA_TYPE, "지원하지 않는 이미지 형식입니다."),
+    TOO_MANY_REQUESTS(HttpStatus.TOO_MANY_REQUESTS, "요청이 너무 많습니다. 잠시 후 다시 시도해주세요."),
+    INTERNAL_SERVER_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "서버 오류가 발생했습니다.");
 
 
     private final HttpStatus status;
@@ -67,6 +72,10 @@ public enum ErrorCode {
 
     public HttpStatus getStatus() {
         return status;
+    }
+
+    public String getCode() {
+        return name();
     }
 
     public String getMessage() {

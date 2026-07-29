@@ -57,7 +57,7 @@ public class UserService {
     }
 
     @Transactional(readOnly = true)
-    public UserResponse getUser(Long userId) {
+    public UserResponse getCurrentUser(Long userId) {
         User user = getActiveUser(userId);
 
         return new UserResponse(
@@ -66,6 +66,21 @@ public class UserService {
                 user.getNickname(),
                 user.getProfileImage()
         );
+    }
+
+    @Transactional(readOnly = true)
+    public UserResponse getUserForAuthenticatedUser(
+            Long authenticatedUserId,
+            Long requestedUserId
+    ) {
+        if (!Objects.equals(
+                authenticatedUserId,
+                requestedUserId
+        )) {
+            throw new CustomException(ErrorCode.FORBIDDEN);
+        }
+
+        return getCurrentUser(authenticatedUserId);
     }
 
     @Transactional(readOnly = true)

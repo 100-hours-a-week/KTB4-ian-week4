@@ -9,6 +9,7 @@ import org.springframework.security.oauth2.jwt.JwtEncoder;
 import org.springframework.security.oauth2.jwt.JwtEncoderParameters;
 import org.springframework.security.oauth2.jwt.JwtException;
 import org.springframework.security.oauth2.jwt.JwtValidators;
+import org.springframework.security.oauth2.jwt.JwtValidationException;
 import org.springframework.security.oauth2.jwt.JwsHeader;
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 import org.springframework.security.oauth2.jwt.NimbusJwtEncoder;
@@ -195,6 +196,38 @@ public class JwtTokenProvider {
 
     public long getRefreshExpirationSeconds() {
         return refreshExpirationSeconds;
+    }
+
+    public boolean isExpiredTokenException(
+            Exception exception
+    ) {
+        Throwable current = exception;
+
+        while (current != null) {
+            if (current instanceof JwtValidationException validationException
+                    && validationException
+                    .getErrors()
+                    .stream()
+                    .map(error -> error.getDescription())
+                    .filter(Objects::nonNull)
+                    .map(String::toLowerCase)
+                    .anyMatch(description ->
+                            description.contains("expired")
+                    )) {
+                return true;
+            }
+
+            String message = current.getMessage();
+
+            if (message != null
+                    && message.toLowerCase().contains("expired")) {
+                return true;
+            }
+
+            current = current.getCause();
+        }
+
+        return false;
     }
 
     private Jwt decode(String token) {

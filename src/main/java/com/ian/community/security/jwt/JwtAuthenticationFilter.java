@@ -106,7 +106,9 @@ public class JwtAuthenticationFilter
 
             request.setAttribute(
                     CustomAuthenticationEntryPoint.ERROR_CODE_ATTRIBUTE,
-                    ErrorCode.INVALID_ACCESS_TOKEN
+                    jwtTokenProvider.isExpiredTokenException(exception)
+                            ? ErrorCode.EXPIRED_ACCESS_TOKEN
+                            : ErrorCode.INVALID_ACCESS_TOKEN
             );
         }
 

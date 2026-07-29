@@ -52,6 +52,7 @@ public class CustomAuthenticationEntryPoint
 
         ApiResponse<Void> body =
                 new ApiResponse<>(
+                        errorCode.getCode(),
                         errorCode.getMessage(),
                         null
                 );

@@ -41,6 +41,7 @@ public class JwtCookieProvider {
                 .maxAge(
                         jwtTokenProvider
                                 .getAccessExpirationSeconds()
+                                + 60
                 )
                 .build();
     }

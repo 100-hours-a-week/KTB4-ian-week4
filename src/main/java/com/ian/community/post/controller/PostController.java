@@ -8,16 +8,21 @@ import com.ian.community.post.dto.request.PostCommentUpdateRequest;
 import com.ian.community.post.dto.request.PostCreateRequest;
 import com.ian.community.post.dto.request.PostUpdateRequest;
 import com.ian.community.post.dto.response.PostCommentResponse;
+import com.ian.community.post.dto.response.BookmarkResponse;
 import com.ian.community.post.dto.response.PostDetailResponse;
 import com.ian.community.post.dto.response.PostLikeResponse;
 import com.ian.community.post.dto.response.PostResponse;
+import com.ian.community.post.dto.response.SliceResponse;
 import com.ian.community.post.service.CommentService;
+import com.ian.community.post.service.BookmarkService;
 import com.ian.community.post.service.PostLikeService;
 import com.ian.community.post.service.PostService;
 import com.ian.community.security.principal.AuthenticatedUser;
 import jakarta.validation.Valid;
-import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Slice;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -26,6 +31,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
+import java.util.Set;
 
 @RestController
 @RequestMapping("/api/posts")
@@ -33,16 +39,20 @@ public class PostController {
     private final PostService postService;
     private final CommentService commentService;
     private final PostLikeService postLikeService;
+    private final BookmarkService bookmarkService;
     private final LocalImageStorageService imageStorageService;
 
     public PostController(
             PostService postService,
             CommentService commentService,
             PostLikeService postLikeService,
-            LocalImageStorageService imageStorageService) {
+            BookmarkService bookmarkService,
+            LocalImageStorageService imageStorageService
+    ) {
         this.postService = postService;
         this.commentService = commentService;
         this.postLikeService = postLikeService;
+        this.bookmarkService = bookmarkService;
         this.imageStorageService = imageStorageService;
     }
 
@@ -78,12 +88,34 @@ public class PostController {
 
     // 게시물 목록 조회
     @GetMapping
-    public ResponseEntity<ApiResponse<Page<PostResponse>>> findAll(Pageable pageable) {
-        Page<PostResponse> response = postService.getPosts(pageable)
-                .map(post -> new PostResponse(post, postService.getPostImageUrl(post)));
+    public ResponseEntity<ApiResponse<SliceResponse<PostResponse>>> findAll(
+            @AuthenticationPrincipal AuthenticatedUser authenticatedUser,
+            @PageableDefault(size = 10) Pageable pageable
+    ) {
+        Pageable limited = limitPageSize(pageable);
+        Slice<Post> posts = postService.getPosts(limited);
+        Set<Long> bookmarkedPostIds =
+                bookmarkService.findBookmarkedPostIds(
+                        authenticatedUser.getUserId(),
+                        posts.getContent()
+                                .stream()
+                                .map(Post::getPostId)
+                                .toList()
+                );
 
-        return ResponseEntity
-                .ok(new ApiResponse<>("post_list_found", response));
+        Slice<PostResponse> response = posts
+                .map(post -> new PostResponse(
+                        post,
+                        postService.getPostImageUrl(post),
+                        bookmarkedPostIds.contains(post.getPostId())
+                ));
+
+        return ResponseEntity.ok(
+                new ApiResponse<>(
+                        "post_list_found",
+                        SliceResponse.from(response)
+                )
+        );
     }
 
     // 게시물 상세 조회
@@ -99,13 +131,21 @@ public class PostController {
                 .map(PostCommentResponse::from)
                 .getContent();
 
-        return ResponseEntity
-                .ok(PostDetailResponse.from(
-                    post,
-                    comments,
-                    postService.getPostImageUrl(post),
-                    postLikeService.isLiked(authenticatedUser.getUserId(), postId)
-        ));
+        return ResponseEntity.ok(
+                PostDetailResponse.from(
+                        post,
+                        comments,
+                        postService.getPostImageUrl(post),
+                        postLikeService.isLiked(
+                                authenticatedUser.getUserId(),
+                                postId
+                        ),
+                        bookmarkService.existsBookmark(
+                                authenticatedUser.getUserId(),
+                                postId
+                        )
+                )
+        );
     }
 
     // 게시물 수정
@@ -206,5 +246,69 @@ public class PostController {
                 commentId);
 
         return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/{postId}/bookmarks")
+    public ResponseEntity<BookmarkResponse> addBookmark(
+            @AuthenticationPrincipal AuthenticatedUser authenticatedUser,
+            @PathVariable Long postId
+    ) {
+        bookmarkService.addBookmark(
+                authenticatedUser.getUserId(),
+                postId
+        );
+
+        return ResponseEntity.ok(
+                new BookmarkResponse(postId, true)
+        );
+    }
+
+    @DeleteMapping("/{postId}/bookmarks")
+    public ResponseEntity<Void> deleteBookmark(
+            @AuthenticationPrincipal AuthenticatedUser authenticatedUser,
+            @PathVariable Long postId
+    ) {
+        bookmarkService.deleteBookmark(
+                authenticatedUser.getUserId(),
+                postId
+        );
+
+        return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/bookmarks")
+    public ResponseEntity<
+            ApiResponse<SliceResponse<PostResponse>>
+            > findBookmarks(
+            @AuthenticationPrincipal
+            AuthenticatedUser authenticatedUser,
+
+            @PageableDefault(size = 10)
+            Pageable pageable
+    ) {
+        Slice<PostResponse> response = bookmarkService
+                .getBookmarkPosts(
+                        authenticatedUser.getUserId(),
+                        limitPageSize(pageable)
+                )
+                .map(post -> new PostResponse(
+                        post,
+                        postService.getPostImageUrl(post),
+                        true
+                ));
+
+        return ResponseEntity.ok(
+                new ApiResponse<>(
+                        "bookmark_list_found",
+                        SliceResponse.from(response)
+                )
+        );
+    }
+
+    private Pageable limitPageSize(Pageable pageable) {
+        return PageRequest.of(
+                Math.max(pageable.getPageNumber(), 0),
+                Math.min(Math.max(pageable.getPageSize(), 1), 100)
+        );
     }
 }

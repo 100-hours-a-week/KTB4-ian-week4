@@ -13,6 +13,7 @@ import com.ian.community.user.dto.response.LoginResponse;
 import com.ian.community.user.dto.response.SignupResponse;
 import com.ian.community.user.dto.response.UserUpdateResponse;
 import com.ian.community.user.dto.response.UserResponse;
+import com.ian.community.user.dto.response.TokenRefreshResponse;
 import com.ian.community.user.service.UserService;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
@@ -67,7 +68,10 @@ public class UserController {
                                 )
                                 .toString()
                 )
-                .body(new SignupResponse(user.getUserId()));
+                .body(new SignupResponse(
+                        user.getUserId(),
+                        tokenPair.accessTokenExpiresAt()
+                ));
     }
 
     @PostMapping("/login")
@@ -97,11 +101,14 @@ public class UserController {
                                 )
                                 .toString()
                 )
-                .body(new LoginResponse(user.getUserId()));
+                .body(new LoginResponse(
+                        user.getUserId(),
+                        tokenPair.accessTokenExpiresAt()
+                ));
     }
 
     @PostMapping("/refresh")
-    public ResponseEntity<Void> refresh(
+    public ResponseEntity<TokenRefreshResponse> refresh(
             HttpServletRequest request
     ) {
         String refreshToken =
@@ -111,7 +118,7 @@ public class UserController {
                 tokenService.rotate(refreshToken);
 
         return ResponseEntity
-                .noContent()
+                .ok()
                 .header(
                         HttpHeaders.SET_COOKIE,
                         jwtCookieProvider
@@ -128,7 +135,9 @@ public class UserController {
                                 )
                                 .toString()
                 )
-                .build();
+                .body(new TokenRefreshResponse(
+                        tokenPair.accessTokenExpiresAt()
+                ));
     }
 
     @PostMapping("/logout")
@@ -157,12 +166,25 @@ public class UserController {
                 .build();
     }
 
-    @GetMapping("/{userId}")
+    @GetMapping("/me")
     public ResponseEntity<UserResponse> getUser(
             @AuthenticationPrincipal AuthenticatedUser authenticatedUser
     ) {
         return ResponseEntity.ok(
-                userService.getUser(authenticatedUser.getUserId())
+                userService.getCurrentUser(authenticatedUser.getUserId())
+        );
+    }
+
+    @GetMapping("/{userId}")
+    public ResponseEntity<UserResponse> getUserCompatibility(
+            @AuthenticationPrincipal AuthenticatedUser authenticatedUser,
+            @PathVariable Long userId
+    ) {
+        return ResponseEntity.ok(
+                userService.getUserForAuthenticatedUser(
+                        authenticatedUser.getUserId(),
+                        userId
+                )
         );
     }
 
