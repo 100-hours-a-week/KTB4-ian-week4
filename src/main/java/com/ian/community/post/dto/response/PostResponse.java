@@ -6,6 +6,7 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 
 import java.time.LocalDateTime;
+import java.util.Objects;
 
 @Getter
 @AllArgsConstructor
@@ -47,11 +48,22 @@ public class PostResponse {
 
     private boolean bookmarked;
 
+    private boolean owner;
+
     public PostResponse(Post post) {
-        this(post, null, false);
+        this(post, null, false, null);
     }
 
     public PostResponse(Post post, String imageUrl, boolean bookmarked) {
+        this(post, imageUrl, bookmarked, null);
+    }
+
+    public PostResponse(
+            Post post,
+            String imageUrl,
+            boolean bookmarked,
+            Long authenticatedUserId
+    ) {
         this.postId = post.getPostId();
         this.content = post.getContent();
         this.userId = post.getAuthorUser().getUserId();
@@ -65,5 +77,9 @@ public class PostResponse {
         this.postDeleted = post.isPostDeleted();
         this.imageUrl = imageUrl;
         this.bookmarked = bookmarked;
+        this.owner = Objects.equals(
+                post.getAuthorUser().getUserId(),
+                authenticatedUserId
+        );
     }
 }
