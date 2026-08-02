@@ -11,7 +11,7 @@ spring:
   # H2 Console 설정
   h2:
     console: # H2 DB를 웹에서 관리할 수 있는 기능
-      enabled: true      # H2 Console 사용 여부
+      enabled: false     # local Profile에서만 명시적으로 활성화
       path: /h2-console  # H2 Console 접속 주소
 
   mvc:
@@ -33,11 +33,6 @@ spring:
     locations: classpath:db/migration
     validate-on-migrate: true
     clean-disabled: true
-
-  security:
-    user:
-      name: user
-      password: 1029
 
   sql:
     init:

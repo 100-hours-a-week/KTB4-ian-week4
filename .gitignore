@@ -42,3 +42,9 @@ out/
 
 # Local uploaded images
 /storage/
+
+# Local deployment secrets
+.env
+.env.*
+deploy/env/*.env
+!deploy/env/*.env.example

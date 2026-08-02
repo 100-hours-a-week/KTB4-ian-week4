@@ -3,6 +3,7 @@ package com.ian.community.config;
 import com.ian.community.security.handler.CustomAccessDeniedHandler;
 import com.ian.community.security.handler.CustomAuthenticationEntryPoint;
 import com.ian.community.security.jwt.JwtAuthenticationFilter;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.Customizer;
@@ -18,11 +19,14 @@ public class SecurityConfig {
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final CustomAuthenticationEntryPoint customAuthenticationEntryPoint;
     private final CustomAccessDeniedHandler customAccessDeniedHandler;
+    private final boolean h2ConsoleEnabled;
 
     public SecurityConfig(
             JwtAuthenticationFilter jwtAuthenticationFilter,
             CustomAuthenticationEntryPoint customAuthenticationEntryPoint,
-            CustomAccessDeniedHandler customAccessDeniedHandler
+            CustomAccessDeniedHandler customAccessDeniedHandler,
+            @Value("${spring.h2.console.enabled:false}")
+            boolean h2ConsoleEnabled
     ) {
         this.jwtAuthenticationFilter =
                 jwtAuthenticationFilter;
@@ -32,12 +36,22 @@ public class SecurityConfig {
 
         this.customAccessDeniedHandler =
                 customAccessDeniedHandler;
+
+        this.h2ConsoleEnabled =
+                h2ConsoleEnabled;
     }
 
     @Bean
     public SecurityFilterChain securityFilterChain(
             HttpSecurity http
     ) throws Exception {
+
+        http.csrf(csrf -> {
+            if (h2ConsoleEnabled) {
+                csrf.ignoringRequestMatchers("/h2-console/**");
+            }
+            csrf.spa();
+        });
 
         http
                 .formLogin(
@@ -52,41 +66,40 @@ public class SecurityConfig {
                         Customizer.withDefaults()
                 )
 
-                .csrf(csrf -> {
-                    csrf.ignoringRequestMatchers("/h2-console/**");
-                    csrf.spa();
-                })
-
                 .sessionManagement(session ->
                         session.sessionCreationPolicy(
                                 SessionCreationPolicy.STATELESS
                         )
                 )
 
-                .authorizeHttpRequests(authorize ->
-                        authorize
-                                .requestMatchers(
+                .authorizeHttpRequests(authorize -> {
+                    authorize
+                            .requestMatchers(
                                         "/api/csrf",
                                         "/api/users/login",
                                         "/api/users/signup",
                                         "/api/users/refresh",
                                         "/api/users/logout",
                                         "/error",
-                                        "/h2-console/**",
                                         "/css/**",
                                         "/js/**",
                                         "/images/**",
                                         "/uploads/**",
                                         "/favicon.ico"
                                 ).permitAll()
-
-                                .requestMatchers(
+                            .requestMatchers(
                                         "/api/admin/**"
-                                ).hasRole("ADMIN")
+                                ).hasRole("ADMIN");
 
-                                .anyRequest()
-                                .authenticated()
-                )
+                    if (h2ConsoleEnabled) {
+                        authorize.requestMatchers(
+                                "/h2-console/**"
+                        ).permitAll();
+                    }
+
+                    authorize.anyRequest()
+                            .authenticated();
+                })
 
                 .exceptionHandling(exception ->
                         exception
