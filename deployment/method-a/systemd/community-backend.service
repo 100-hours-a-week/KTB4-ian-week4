@@ -1,0 +1,38 @@
+[Unit]
+Description=Community Spring Boot backend
+After=network-online.target mysql.service
+Wants=network-online.target
+Requires=mysql.service
+
+[Service]
+Type=simple
+User=community
+Group=community
+WorkingDirectory=/var/lib/community
+EnvironmentFile=/etc/community/backend.env
+ExecStart=/usr/bin/java -Xms256m -Xmx640m -jar /opt/community/backend/app.jar
+SuccessExitStatus=143
+Restart=on-failure
+RestartSec=5s
+TimeoutStopSec=30s
+UMask=0027
+
+NoNewPrivileges=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectHome=true
+ProtectSystem=strict
+ProtectControlGroups=true
+ProtectKernelModules=true
+ProtectKernelTunables=true
+ProtectKernelLogs=true
+ProtectClock=true
+RestrictSUIDSGID=true
+LockPersonality=true
+CapabilityBoundingSet=
+AmbientCapabilities=
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+ReadWritePaths=/var/lib/community/uploads
+
+[Install]
+WantedBy=multi-user.target

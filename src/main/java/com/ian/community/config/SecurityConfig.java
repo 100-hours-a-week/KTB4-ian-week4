@@ -5,6 +5,7 @@ import com.ian.community.security.handler.CustomAuthenticationEntryPoint;
 import com.ian.community.security.jwt.JwtAuthenticationFilter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
@@ -18,11 +19,14 @@ public class SecurityConfig {
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final CustomAuthenticationEntryPoint customAuthenticationEntryPoint;
     private final CustomAccessDeniedHandler customAccessDeniedHandler;
+    private final boolean h2ConsoleEnabled;
 
     public SecurityConfig(
             JwtAuthenticationFilter jwtAuthenticationFilter,
             CustomAuthenticationEntryPoint customAuthenticationEntryPoint,
-            CustomAccessDeniedHandler customAccessDeniedHandler
+            CustomAccessDeniedHandler customAccessDeniedHandler,
+            @Value("${spring.h2.console.enabled:false}")
+            boolean h2ConsoleEnabled
     ) {
         this.jwtAuthenticationFilter =
                 jwtAuthenticationFilter;
@@ -32,6 +36,7 @@ public class SecurityConfig {
 
         this.customAccessDeniedHandler =
                 customAccessDeniedHandler;
+        this.h2ConsoleEnabled = h2ConsoleEnabled;
     }
 
     @Bean
@@ -53,7 +58,11 @@ public class SecurityConfig {
                 )
 
                 .csrf(csrf -> {
-                    csrf.ignoringRequestMatchers("/h2-console/**");
+                    if (h2ConsoleEnabled) {
+                        csrf.ignoringRequestMatchers(
+                                "/h2-console/**"
+                        );
+                    }
                     csrf.spa();
                 })
 
@@ -63,7 +72,7 @@ public class SecurityConfig {
                         )
                 )
 
-                .authorizeHttpRequests(authorize ->
+                .authorizeHttpRequests(authorize -> {
                         authorize
                                 .requestMatchers(
                                         "/api/csrf",
@@ -72,7 +81,6 @@ public class SecurityConfig {
                                         "/api/users/refresh",
                                         "/api/users/logout",
                                         "/error",
-                                        "/h2-console/**",
                                         "/css/**",
                                         "/js/**",
                                         "/images/**",
@@ -80,13 +88,23 @@ public class SecurityConfig {
                                         "/favicon.ico"
                                 ).permitAll()
 
-                                .requestMatchers(
+                                ;
+
+                        if (h2ConsoleEnabled) {
+                            authorize
+                                    .requestMatchers(
+                                            "/h2-console/**"
+                                    )
+                                    .permitAll();
+                        }
+
+                        authorize.requestMatchers(
                                         "/api/admin/**"
                                 ).hasRole("ADMIN")
 
                                 .anyRequest()
-                                .authenticated()
-                )
+                                .authenticated();
+                })
 
                 .exceptionHandling(exception ->
                         exception

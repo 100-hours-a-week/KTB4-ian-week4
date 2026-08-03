@@ -42,3 +42,24 @@ out/
 
 # Local uploaded images
 /storage/
+
+# Credentials and private environment files
+.aws/
+*.pem
+*.key
+*.ppk
+.env
+.env.*
+!.env.example
+application-secret.yml
+backend.env
+backend.env.*
+!backend.env.example
+
+# Runtime data, backups, dumps, and private evidence
+/uploads/
+/backup/
+*.sql.gz
+*.dump
+*.tar.gz
+/evidence/private/
