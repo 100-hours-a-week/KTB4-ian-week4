@@ -184,6 +184,21 @@ class SecurityCsrfTest {
                 );
     }
 
+    @Test
+    @DisplayName(
+            "H2 Console이 비활성화된 프로필에서는 인증 없이 접근할 수 없다"
+    )
+    void h2ConsoleIsNotPublicWhenDisabled()
+            throws Exception {
+
+        mockMvc.perform(
+                        get("/h2-console")
+                )
+                .andExpect(
+                        status().isUnauthorized()
+                );
+    }
+
     private Cookie requestCsrfCookie()
             throws Exception {
 

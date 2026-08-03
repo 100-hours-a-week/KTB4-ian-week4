@@ -1,58 +1,21 @@
 spring:
-  #server:
-    #port: 80 # 내장 톰캣 포트번호
-
-  datasource:
-    driver-class-name: org.h2.Driver
-    url: jdbc:h2:mem:${H2_DATABASE_NAME:community};DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
-    username: sa
-    password:
-
-  # H2 Console 설정
-  h2:
-    console: # H2 DB를 웹에서 관리할 수 있는 기능
-      enabled: true      # H2 Console 사용 여부
-      path: /h2-console  # H2 Console 접속 주소
-
+  profiles:
+    default: local
   mvc:
     pathmatch:
       matching-strategy: ant_path_matcher
-
-  # JPA 설정
   jpa:
-    hibernate:
-      ddl-auto: none
-
+    open-in-view: false
     properties:
       hibernate:
-        format_sql: true   # 쿼리 로그 포맷 - 정렬
-        show_sql: true     # 쿼리 로그 출력
-
-  flyway:
-    enabled: true
-    locations: classpath:db/migration
-    validate-on-migrate: true
-    clean-disabled: true
-
-  security:
-    user:
-      name: user
-      password: 1029
-
+        format_sql: false
+        show_sql: false
   sql:
     init:
       mode: never
 
-app:
-  frontend-origin: http://127.0.0.1:5500
-  storage:
-    root: ${LOCAL_STORAGE_PATH:./storage/images}
-  cookie:
-    secure: false      # 서비스 시에는 true로 설정, 테스트 진행 시에만 false
-    same-site: Lax
-
 jwt:
   issuer: ian-community
   secret: ${JWT_SECRET}
-  access-token-expiration-seconds: 600        # 엑시스 토큰 만료 시간 설정 - 10분 설정
-  refresh-token-expiration-seconds: 604800    # 리프레쉬 토큰 만료 시간 설정 - 7일 설정
+  access-token-expiration-seconds: 600
+  refresh-token-expiration-seconds: 604800

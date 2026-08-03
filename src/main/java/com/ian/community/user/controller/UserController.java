@@ -2,7 +2,7 @@ package com.ian.community.user.controller;
 
 import com.ian.community.common.exception.CustomException;
 import com.ian.community.common.exception.ErrorCode;
-import com.ian.community.common.image.LocalImageStorageService;
+import com.ian.community.common.image.ImageStorageService;
 import com.ian.community.security.jwt.JwtCookieProvider;
 import com.ian.community.security.principal.AuthenticatedUser;
 import com.ian.community.security.token.TokenPair;
@@ -36,7 +36,7 @@ public class UserController {
     private final UserService userService;
     private final TokenService tokenService;
     private final JwtCookieProvider jwtCookieProvider;
-    private final LocalImageStorageService imageStorageService;
+    private final ImageStorageService imageStorageService;
 
     @PostMapping(
             value = "/signup",

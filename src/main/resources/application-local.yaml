@@ -1,4 +1,7 @@
 spring:
+  config:
+    activate:
+      on-profile: local
   datasource:
     driver-class-name: org.h2.Driver
     url: jdbc:h2:mem:${H2_DATABASE_NAME:community};DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
@@ -12,8 +15,19 @@ spring:
 
   jpa:
     hibernate:
-      ddl-auto: none
+      ddl-auto: update
+    properties:
+      hibernate:
+        format_sql: true
+        show_sql: true
+
+  flyway:
+    enabled: false
 
 app:
+  frontend-origin: http://127.0.0.1:5500
   storage:
     root: ${LOCAL_STORAGE_PATH:./storage/images}
+  cookie:
+    secure: false
+    same-site: Lax

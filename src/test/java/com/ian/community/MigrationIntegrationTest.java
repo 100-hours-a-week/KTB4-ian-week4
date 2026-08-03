@@ -16,6 +16,8 @@ import static org.assertj.core.api.Assertions.assertThat;
                         + "DB_CLOSE_ON_EXIT=FALSE",
                 "spring.jpa.hibernate.ddl-auto=validate",
                 "spring.flyway.enabled=true",
+                "spring.flyway.locations="
+                        + "classpath:db/migration/h2",
                 "jwt.secret="
                         + "MDEyMzQ1Njc4OWFiY2RlZj"
                         + "AxMjM0NTY3ODlhYmNkZWY="

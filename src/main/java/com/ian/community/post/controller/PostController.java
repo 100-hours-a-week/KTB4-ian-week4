@@ -1,7 +1,7 @@
 package com.ian.community.post.controller;
 
 import com.ian.community.common.ApiResponse;
-import com.ian.community.common.image.LocalImageStorageService;
+import com.ian.community.common.image.ImageStorageService;
 import com.ian.community.post.domain.Post;
 import com.ian.community.post.dto.request.PostCommentCreateRequest;
 import com.ian.community.post.dto.request.PostCommentUpdateRequest;
@@ -35,14 +35,14 @@ public class PostController {
     private final CommentService commentService;
     private final PostLikeService postLikeService;
     private final BookmarkService bookmarkService;
-    private final LocalImageStorageService imageStorageService;
+    private final ImageStorageService imageStorageService;
 
     public PostController(
             PostService postService,
             CommentService commentService,
             PostLikeService postLikeService,
             BookmarkService bookmarkService,
-            LocalImageStorageService imageStorageService
+            ImageStorageService imageStorageService
     ) {
         this.postService = postService;
         this.commentService = commentService;
@@ -51,7 +51,7 @@ public class PostController {
         this.imageStorageService = imageStorageService;
     }
 
-    @PostMapping(value = "/{userId}", consumes = MediaType.APPLICATION_JSON_VALUE)
+    @PostMapping(value = "/me", consumes = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<Long> createPost(
             @AuthenticationPrincipal AuthenticatedUser authenticatedUser,
             @Valid  @RequestBody PostCreateRequest request
@@ -65,7 +65,7 @@ public class PostController {
         return ResponseEntity.status(HttpStatus.CREATED).body(postId);
     }
 
-    @PostMapping(value = "/{userId}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PostMapping(value = "/me", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<Long> createPostWithImage(
             @AuthenticationPrincipal AuthenticatedUser authenticatedUser,
             @RequestPart("content") String content,
@@ -203,7 +203,7 @@ public class PostController {
     }
 
     // 댓글 작성
-    @PostMapping("/{postId}/comments/users/{userId}")
+    @PostMapping("/{postId}/comments/users/me")
     public ResponseEntity<Long> createComment(
             @AuthenticationPrincipal AuthenticatedUser authenticatedUser,
             @PathVariable Long postId,
@@ -221,7 +221,7 @@ public class PostController {
     }
 
     // 댓글 수정
-    @PatchMapping("/{postId}/comments/{commentId}/users/{userId}")
+    @PatchMapping("/{postId}/comments/{commentId}/users/me")
     public ResponseEntity<Void> updateComment(
             @AuthenticationPrincipal AuthenticatedUser authenticatedUser,
             @PathVariable Long postId,
@@ -241,7 +241,7 @@ public class PostController {
     }
 
     // 댓글 삭제
-    @DeleteMapping("/{postId}/comments/{commentId}/users/{userId}")
+    @DeleteMapping("/{postId}/comments/{commentId}/users/me")
     public ResponseEntity<Void> deleteComment(
             @AuthenticationPrincipal AuthenticatedUser authenticatedUser,
             @PathVariable Long postId,
