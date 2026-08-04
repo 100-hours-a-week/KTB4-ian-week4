@@ -7,6 +7,9 @@ Dynu의 `pulse` 무료 고정 호스트와 Let's Encrypt HTTPS를 사용한다.
 
 2026-08-04 검증된 제출 배포 주소: <https://pulse.gleeze.com/>
 
+A/B 방식을 하나의 문제 해결 과정으로 정리한 기술 블로그 문서는
+[`../DEPLOYMENT_TECH_BLOG.md`](../DEPLOYMENT_TECH_BLOG.md)를 참고합니다.
+
 ## 구조
 
 ```text

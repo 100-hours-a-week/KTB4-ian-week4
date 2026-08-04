@@ -1,7 +1,11 @@
 # EC2 Docker Compose deployment (B method)
 
 재현 가능한 로컬 Compose 런타임 검증 결과는
-[`VALIDATION_REPORT.md`](./VALIDATION_REPORT.md)에 기록한다.
+[`VALIDATION_REPORT.md`](./VALIDATION_REPORT.md)에 기록합니다.
+
+A/B 방식의 선택 근거, 실제 코드, EC2 환경과 검증 결과를 함께 설명한 기술
+블로그 문서는 [`../DEPLOYMENT_TECH_BLOG.md`](../DEPLOYMENT_TECH_BLOG.md)를
+참고합니다.
 
 This directory operates one Ubuntu 24.04 `linux/amd64` EC2 instance with three
 containers. Only the frontend Nginx port is published. The backend and MySQL are

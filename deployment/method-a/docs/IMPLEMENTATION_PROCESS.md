@@ -3,9 +3,9 @@
 작성 기준일: 2026-08-04
 구현 기준:
 
-- Backend `d7fedb4` (`feat: add Method A EC2 deployment support`)
-- Frontend `767b1e9` (`feat: prepare frontend for Method A deployment`)
-- 운영 검증 기록 `VALIDATION_REPORT.md` (2026-08-03)
+- Backend `3886355` (`feat: A 방식 EC2 배포 지원 추가`)
+- Frontend `70fed0f` (`feat: A 방식 배포를 위한 프론트엔드 준비`)
+- 운영 검증 기록 `VALIDATION_REPORT.md` (2026-08-04)
 
 이 문서는 A방식인 **단일 EC2 직접 설치 배포**를 구현하면서 진행한 작업,
 추가·수정한 코드의 기능과 역할, 실제로 확인된 EC2 환경 및 운영 정보를
@@ -446,7 +446,7 @@ ShellCheck는 로컬에 명령이 설치되어 있지 않아 실행하지 못했
 
 ## 11. 무료 고정 도메인과 HTTPS 추가 (2026-08-04)
 
-위 1~10장은 `d7fedb4` 기준의 HTTP 검증 이력을 보존한다. 2026-08-04에는
+위 1~10장은 `3886355` 기준의 HTTP 검증 이력을 보존한다. 2026-08-04에는
 다음 공개 운영 구성을 실제 EC2에 추가하고 최종 검증했다.
 
 - Dynu `pulse` 무료 고정 Hostname과 10분 주기 Public IPv4 자동 갱신
