@@ -47,11 +47,22 @@ public class PostResponse {
 
     private boolean bookmarked;
 
+    private boolean liked;
+
     public PostResponse(Post post) {
-        this(post, null, false);
+        this(post, null, false, false);
     }
 
     public PostResponse(Post post, String imageUrl, boolean bookmarked) {
+        this(post, imageUrl, bookmarked, false);
+    }
+
+    public PostResponse(
+            Post post,
+            String imageUrl,
+            boolean bookmarked,
+            boolean liked
+    ) {
         this.postId = post.getPostId();
         this.content = post.getContent();
         this.userId = post.getAuthorUser().getUserId();
@@ -65,5 +76,6 @@ public class PostResponse {
         this.postDeleted = post.isPostDeleted();
         this.imageUrl = imageUrl;
         this.bookmarked = bookmarked;
+        this.liked = liked;
     }
 }
