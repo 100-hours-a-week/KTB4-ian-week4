@@ -227,6 +227,84 @@ class UserApiIntegrationTest {
     }
 
     @Test
+    @DisplayName("Refresh 성공은 200과 만료 시각, 회전된 인증 쿠키를 반환한다")
+    void refreshSuccessReturnsMetadataAndRotatedCookies() throws Exception {
+        User user = saveUser("refresh-success@example.com", "갱신사용자");
+        TokenPair initial = tokenService.issueInitialTokens(user);
+
+        org.springframework.test.web.servlet.MvcResult result = mockMvc.perform(
+                        post("/api/users/refresh")
+                                .with(csrf())
+                                .cookie(refreshCookie(initial.refreshToken()))
+                )
+                .andExpect(status().isOk())
+                .andExpect(cookie().exists("accessToken"))
+                .andExpect(cookie().exists("refreshToken"))
+                .andExpect(jsonPath("$.accessTokenExpiresAt").isString())
+                .andReturn();
+
+        org.assertj.core.api.Assertions.assertThat(
+                        result.getResponse().getCookie("accessToken").getValue()
+                )
+                .isNotEqualTo(initial.accessToken());
+        org.assertj.core.api.Assertions.assertThat(
+                        result.getResponse().getCookie("refreshToken").getValue()
+                )
+                .isNotEqualTo(initial.refreshToken());
+    }
+
+    @Test
+    @DisplayName("Refresh Token이 없으면 명시적인 오류 코드를 반환한다")
+    void rejectMissingRefreshToken() throws Exception {
+        mockMvc.perform(
+                        post("/api/users/refresh")
+                                .with(csrf())
+                )
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("REFRESH_TOKEN_NOT_FOUND"));
+    }
+
+    @Test
+    @DisplayName("위조된 Refresh Token은 명시적인 오류 코드를 반환한다")
+    void rejectInvalidRefreshToken() throws Exception {
+        mockMvc.perform(
+                        post("/api/users/refresh")
+                                .with(csrf())
+                                .cookie(refreshCookie("forged"))
+                )
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("INVALID_REFRESH_TOKEN"));
+    }
+
+    @Test
+    @DisplayName("만료된 Refresh Token은 명시적인 오류 코드를 반환한다")
+    void rejectExpiredRefreshToken() throws Exception {
+        mockMvc.perform(
+                        post("/api/users/refresh")
+                                .with(csrf())
+                                .cookie(refreshCookie(createExpiredRefreshToken()))
+                )
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("EXPIRED_REFRESH_TOKEN"));
+    }
+
+    @Test
+    @DisplayName("이미 사용한 Refresh Token은 명시적인 오류 코드를 반환한다")
+    void rejectReusedRefreshToken() throws Exception {
+        User user = saveUser("refresh-reused@example.com", "재사용검증");
+        TokenPair initial = tokenService.issueInitialTokens(user);
+        tokenService.rotate(initial.refreshToken());
+
+        mockMvc.perform(
+                        post("/api/users/refresh")
+                                .with(csrf())
+                                .cookie(refreshCookie(initial.refreshToken()))
+                )
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("REFRESH_TOKEN_REUSED"));
+    }
+
+    @Test
     @DisplayName("검증 실패한 회원가입은 사용자를 저장하지 않는다")
     void invalidSignupDoesNotSaveUser() throws Exception {
         long before = userRepository.count();
@@ -289,6 +367,10 @@ class UserApiIntegrationTest {
         return new Cookie(JwtCookieProvider.ACCESS_TOKEN_COOKIE, token);
     }
 
+    private Cookie refreshCookie(String token) {
+        return new Cookie(JwtCookieProvider.REFRESH_TOKEN_COOKIE, token);
+    }
+
     private String createTrackedAccessToken(Long userId, String email) {
         String familyId = UUID.randomUUID().toString();
         String token = jwtTokenProvider.createAccessToken(
@@ -328,6 +410,36 @@ class UserApiIntegrationTest {
                 .claim("token_type", "access")
                 .claim("email", "expired@example.com")
                 .claim("roles", List.of("USER"))
+                .build();
+
+        return encoder.encode(
+                JwtEncoderParameters.from(
+                        JwsHeader.with(MacAlgorithm.HS256)
+                                .type("JWT")
+                                .build(),
+                        claims
+                )
+        ).getTokenValue();
+    }
+
+    private String createExpiredRefreshToken() {
+        Instant now = Instant.now();
+        SecretKeySpec secretKey = new SecretKeySpec(
+                Base64.getDecoder().decode(SECRET),
+                "HmacSHA256"
+        );
+        NimbusJwtEncoder encoder = NimbusJwtEncoder
+                .withSecretKey(secretKey)
+                .algorithm(MacAlgorithm.HS256)
+                .build();
+        JwtClaimsSet claims = JwtClaimsSet.builder()
+                .issuer("ian-community")
+                .subject("1")
+                .issuedAt(now.minusSeconds(120))
+                .expiresAt(now.minusSeconds(90))
+                .id("expired-refresh-token")
+                .claim("token_type", "refresh")
+                .claim("family_id", UUID.randomUUID().toString())
                 .build();
 
         return encoder.encode(
