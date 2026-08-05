@@ -12,7 +12,10 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Collection;
 import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -55,6 +58,22 @@ public class PostLikeService {
         Post post = getActivePost(postId);
 
         return postLikeRepository.findByAuthorUserAndAuthorPost(user, post).isPresent();
+    }
+
+    public Set<Long> findLikedPostIds(
+            Long userId,
+            Collection<Long> postIds
+    ) {
+        getActiveUser(userId);
+
+        if (postIds.isEmpty()) {
+            return Set.of();
+        }
+
+        return postLikeRepository
+                .findLikedPostIds(userId, postIds)
+                .stream()
+                .collect(Collectors.toUnmodifiableSet());
     }
 
     private User getActiveUser(Long userId) {

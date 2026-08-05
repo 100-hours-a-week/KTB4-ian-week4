@@ -184,6 +184,63 @@ class PostSliceApiIntegrationTest {
     }
 
     @Test
+    @DisplayName("피드 목록은 로그인 사용자별 좋아요 여부와 공통 좋아요 수를 반환한다")
+    void returnViewerSpecificLikedStateInFeedSlice() throws Exception {
+        User author = saveUser("liked-author@example.com", "likeAuthor");
+        User viewer = saveUser("liked-viewer@example.com", "likeViewer");
+        Post post = postRepository.saveAndFlush(
+                new Post(author, "좋아요 상태 피드")
+        );
+        Cookie authorAccess = accessCookie(author);
+
+        mockMvc.perform(
+                        post("/api/posts/{postId}/likes", post.getPostId())
+                                .with(csrf())
+                                .cookie(authorAccess)
+                )
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.liked").value(true))
+                .andExpect(jsonPath("$.like_count").value(1));
+
+        mockMvc.perform(
+                        get("/api/posts")
+                                .param("page", "0")
+                                .param("size", "10")
+                                .cookie(authorAccess)
+                )
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.content[0].liked").value(true))
+                .andExpect(jsonPath("$.data.content[0].like_count").value(1));
+
+        mockMvc.perform(
+                        post("/api/posts/{postId}/bookmarks", post.getPostId())
+                                .with(csrf())
+                                .cookie(authorAccess)
+                )
+                .andExpect(status().isOk());
+
+        mockMvc.perform(
+                        get("/api/posts/bookmarks")
+                                .param("page", "0")
+                                .param("size", "10")
+                                .cookie(authorAccess)
+                )
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.content[0].liked").value(true))
+                .andExpect(jsonPath("$.data.content[0].like_count").value(1));
+
+        mockMvc.perform(
+                        get("/api/posts")
+                                .param("page", "0")
+                                .param("size", "10")
+                                .cookie(accessCookie(viewer))
+                )
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.content[0].liked").value(false))
+                .andExpect(jsonPath("$.data.content[0].like_count").value(1));
+    }
+
+    @Test
     @DisplayName("북마크 저장은 최초와 멱등 재요청의 성공 코드를 구분한다")
     void distinguishBookmarkCreatedAndAlreadySaved() throws Exception {
         User user = saveUser("bookmark-code@example.com", "북마크코드");

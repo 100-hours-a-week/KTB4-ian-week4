@@ -89,14 +89,19 @@ public class PostController {
     ) {
         Pageable limited = limitPageSize(pageable);
         Slice<Post> posts = postService.getPosts(limited);
+        List<Long> postIds = posts.getContent()
+                .stream()
+                .map(Post::getPostId)
+                .toList();
         Set<Long> bookmarkedPostIds =
                 bookmarkService.findBookmarkedPostIds(
                         authenticatedUser.getUserId(),
-                        posts.getContent()
-                                .stream()
-                                .map(Post::getPostId)
-                                .toList()
+                        postIds
                 );
+        Set<Long> likedPostIds = postLikeService.findLikedPostIds(
+                authenticatedUser.getUserId(),
+                postIds
+        );
 
         Slice<PostResponse> response = posts.map(
                 post -> new PostResponse(
@@ -104,7 +109,8 @@ public class PostController {
                         postService.getPostImageUrl(post),
                         bookmarkedPostIds.contains(
                                 post.getPostId()
-                        )
+                        ),
+                        likedPostIds.contains(post.getPostId())
                 )
         );
 
@@ -300,15 +306,23 @@ public class PostController {
             @PageableDefault(size = 10)
             Pageable pageable
     ) {
-        Slice<PostResponse> response = bookmarkService
-                .getBookmarkPosts(
-                        authenticatedUser.getUserId(),
-                        limitPageSize(pageable)
-                )
+        Slice<Post> posts = bookmarkService.getBookmarkPosts(
+                authenticatedUser.getUserId(),
+                limitPageSize(pageable)
+        );
+        Set<Long> likedPostIds = postLikeService.findLikedPostIds(
+                authenticatedUser.getUserId(),
+                posts.getContent()
+                        .stream()
+                        .map(Post::getPostId)
+                        .toList()
+        );
+        Slice<PostResponse> response = posts
                 .map(post -> new PostResponse(
                         post,
                         postService.getPostImageUrl(post),
-                        true
+                        true,
+                        likedPostIds.contains(post.getPostId())
                 ));
 
         boolean hasNext = response.hasNext();
