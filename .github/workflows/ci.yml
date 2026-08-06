@@ -35,6 +35,7 @@ jobs:
         run: |
           ./deployment/ec2-compose/scripts/verify-workflows.sh
           ./deployment/ec2-compose/scripts/test-required-gate.sh
+          ./deployment/ec2-compose/scripts/test-release-env-compatibility.sh
 
   image-build:
     name: BE / image-build

@@ -198,6 +198,36 @@ validate_release_env() {
   }
 }
 
+is_registry_release_env() {
+  local env_file="$1"
+  [[ -s "${env_file}" ]] || return 1
+  (
+    validate_release_env "${env_file}" >/dev/null 2>&1
+  )
+}
+
+preserve_legacy_compose() {
+  local bootstrap_root="$1"
+  local current_env="$2"
+  local archive_parent="$3"
+  local existing_root legacy_root
+
+  [[ -s "${current_env}" ]] || return 0
+  is_registry_release_env "${current_env}" && return 0
+
+  existing_root="$(env_value "${current_env}" LEGACY_COMPOSE_ROOT)"
+  if [[ -n "${existing_root}" && -f "${existing_root}/compose.yaml" ]]; then
+    return 0
+  fi
+
+  require_file "${bootstrap_root}/compose.yaml"
+  install -d -m 0700 "${archive_parent}"
+  legacy_root="$(mktemp -d "${archive_parent}/ec2-compose.XXXXXX")"
+  cp -a "${bootstrap_root}/." "${legacy_root}/"
+  set_env_value "${current_env}" LEGACY_COMPOSE_ROOT "${legacy_root}"
+  echo "Preserved the legacy Compose assets at ${legacy_root}."
+}
+
 validate_release_manifest() {
   local manifest="$1"
   require_nonempty_file "${manifest}"
