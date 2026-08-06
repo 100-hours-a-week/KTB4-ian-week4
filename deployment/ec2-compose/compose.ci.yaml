@@ -1,0 +1,23 @@
+services:
+  mysql:
+    restart: "no"
+  backend:
+    restart: "no"
+  frontend:
+    restart: "no"
+  nginx:
+    restart: "no"
+    ports: !override
+      - target: 8080
+        published: "${CI_HTTP_PORT:-0}"
+        host_ip: 127.0.0.1
+        protocol: tcp
+    volumes: !override
+      - type: bind
+        source: ${COMPOSE_ROOT:-/opt/community/deployment/ec2-compose}/nginx/nginx.ci.conf
+        target: /etc/nginx/nginx.conf
+        read_only: true
+      - type: bind
+        source: ${ACME_ROOT:-/data/community/acme}
+        target: /var/www/certbot
+        read_only: true

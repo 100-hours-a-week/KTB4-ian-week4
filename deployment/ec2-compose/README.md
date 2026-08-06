@@ -3,18 +3,20 @@
 재현 가능한 로컬 Compose 런타임 검증 결과는
 [`VALIDATION_REPORT.md`](./VALIDATION_REPORT.md)에 기록합니다.
 
-A/B 방식의 선택 근거, 실제 코드, EC2 환경과 검증 결과를 함께 설명한 기술
-블로그 문서는 [`../DEPLOYMENT_TECH_BLOG.md`](../DEPLOYMENT_TECH_BLOG.md)를
-참고합니다.
+A/B 방식의 배경과 기존 운영 검증 기록은
+[`../DEPLOYMENT_TECH_BLOG.md`](../DEPLOYMENT_TECH_BLOG.md)를 참고합니다.
 
-This directory operates one Ubuntu 24.04 `linux/amd64` EC2 instance with three
-containers. Only the frontend Nginx port is published. The backend and MySQL are
-reachable only by service name on the Compose bridge network.
+This directory operates one Ubuntu 24.04 `linux/amd64` EC2 instance with exactly
+four services. Only the edge Nginx publishes host ports 80 and 443; MySQL,
+Backend, and the Frontend static origin are reachable only by service name on
+the Compose bridge network. TLS terminates at the edge Nginx.
 
 ```text
-host :80 -> frontend:80 -> backend:8080 -> mysql:3306
-                         -> /data/community/uploads
-                                      mysql -> /data/community/mysql
+host :80/:443 -> edge nginx:8080/8443
+                    |-- /                  -> frontend:8080
+                    |-- /api,/uploads,...  -> backend:8080 -> mysql:3306
+                                                   |       -> /data/community/mysql
+                                                   `--------> /data/community/uploads
 ```
 
 AWS Console and every EC2 command remain operator-owned. Run the scripts only
@@ -32,7 +34,10 @@ kept outside the checkout:
 /data/community/backup
 /data/community/evidence
 /data/community/releases
+/data/community/acme
 /etc/community/secrets
+/etc/community/tls
+/opt/community/configs/<backend-config-sha>
 ```
 
 ## One-time host preparation
@@ -50,7 +55,15 @@ exist, and three empty secret files are reported. Fill the files with
 `sudoedit` as described in `secrets/README.md`. Never pass a secret as a command
 argument.
 
-## Release inputs
+## Release inputs and gates
+
+Follow [`GATES.md`](./GATES.md). Registry deployment through the protected
+Backend workflow is the primary path. It prepares the exact trusted Backend
+config SHA, validates immutable image/commit pairs, runs an isolated full-stack
+smoke, and invokes `deploy.sh` only after the smoke passes.
+
+The tar workflow below is an operator-driven offline fallback only. Use
+`compose.offline.yaml`; do not mix it with the automatic registry path.
 
 Copy `compose.example.env` to `.env`, replace all angle-bracket placeholders,
 and keep the file mode `0600`. It contains image tags and public configuration,
@@ -77,11 +90,12 @@ sudo docker compose --env-file /data/community/releases/current.env \
 sudo docker stats --no-stream
 ```
 
-Deployment promotes the release state only after all three containers become
-healthy. Verification checks architecture, health, non-root application users,
-read-only root filesystems, host port exposure, H2 Console, secret metadata, and
-upload permissions. It cannot verify Security Group, EBS encryption, IMDSv2,
-reboot persistence, browser flows, or AWS cost settings.
+Deployment promotes the release state only after all four services become
+healthy and edge/API/database verification passes. Verification checks
+architecture, health, non-root users, read-only application/edge filesystems,
+host port exposure, blocked Actuator/H2/config paths, Secret metadata, cache and
+body-limit policy, Flyway/MySQL connectivity, and database/upload persistence.
+It cannot verify Security Group, EBS encryption, IMDSv2, or AWS cost settings.
 
 If startup fails, use service-scoped logs without dumping environment or inspect
 data:
@@ -91,6 +105,7 @@ sudo docker compose --env-file .env --file compose.yaml ps
 sudo docker compose --env-file .env --file compose.yaml logs --tail=200 frontend
 sudo docker compose --env-file .env --file compose.yaml logs --tail=200 backend
 sudo docker compose --env-file .env --file compose.yaml logs --tail=200 mysql
+sudo docker compose --env-file .env --file compose.yaml logs --tail=200 nginx
 ```
 
 Do not share logs until they have been reviewed for personal data.

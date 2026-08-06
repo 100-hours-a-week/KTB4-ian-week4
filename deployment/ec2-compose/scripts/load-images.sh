@@ -24,8 +24,8 @@ require_nonempty_file "${checksum_file}"
 mapfile -t image_archives < <(
   find "${artifact_dir}" -maxdepth 1 -type f -name '*.tar' -print | sort
 )
-if [[ "${#image_archives[@]}" -eq 0 ]]; then
-  echo "No .tar image archives found in ${artifact_dir}." >&2
+if [[ "${#image_archives[@]}" -ne 4 ]]; then
+  echo "Offline fallback requires exactly four image archives; found ${#image_archives[@]}." >&2
   exit 1
 fi
 

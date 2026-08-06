@@ -1,12 +1,24 @@
 name: community
 
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: 10m
+    max-file: "3"
+
+x-security: &default-security
+  security_opt:
+    - no-new-privileges:true
+  cap_drop:
+    - ALL
+
 services:
   mysql:
-    image: ${MYSQL_IMAGE:?Set MYSQL_IMAGE to a fixed MySQL 8.4 tag}
-    pull_policy: missing
+    image: ${MYSQL_IMAGE:?Set MYSQL_IMAGE to the approved digest reference}
+    platform: linux/amd64
+    pull_policy: ${IMAGE_PULL_POLICY:-always}
     user: "999:999"
-    group_add:
-      - "20000"
+    group_add: ["20000"]
     environment:
       MYSQL_DATABASE: ${MYSQL_DATABASE:-community}
       MYSQL_USER: ${DB_USERNAME:-community}
@@ -28,39 +40,30 @@ services:
       - type: bind
         source: ${DATA_ROOT:-/data/community}/mysql
         target: /var/lib/mysql
-    expose:
-      - "3306"
-    networks:
-      - community
+    expose: ["3306"]
+    networks: [community]
     restart: unless-stopped
     stop_grace_period: 60s
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "--host=127.0.0.1", "--silent"]
       interval: 10s
       timeout: 5s
-      retries: 10
+      retries: 12
       start_period: 40s
-    security_opt:
-      - no-new-privileges:true
-    cap_drop:
-      - ALL
+    <<: *default-security
     pids_limit: 256
     mem_limit: 640m
     cpus: 0.75
     tmpfs:
-      - /tmp:rw,noexec,nosuid,size=64m,uid=999,gid=999
-    logging: &default-logging
-      driver: json-file
-      options:
-        max-size: 10m
-        max-file: "3"
+      - /tmp:rw,noexec,nosuid,nodev,size=64m,uid=999,gid=999
+    logging: *default-logging
 
   backend:
-    image: ${BACKEND_IMAGE:?Set BACKEND_IMAGE to a commit-tagged image}
-    pull_policy: never
+    image: ${BACKEND_IMAGE:?Set BACKEND_IMAGE to the approved digest reference}
+    platform: linux/amd64
+    pull_policy: ${IMAGE_PULL_POLICY:-always}
     user: "10001:10001"
-    group_add:
-      - "20000"
+    group_add: ["20000"]
     environment:
       SPRING_PROFILES_ACTIVE: aws
       SPRING_CONFIG_IMPORT: optional:configtree:/run/secrets/
@@ -70,7 +73,7 @@ services:
       DB_POOL_MAX_SIZE: ${DB_POOL_MAX_SIZE:-8}
       DB_POOL_MIN_IDLE: ${DB_POOL_MIN_IDLE:-1}
       FRONTEND_ORIGIN: ${FRONTEND_ORIGIN:?Set FRONTEND_ORIGIN to the public origin}
-      COOKIE_SECURE: ${COOKIE_SECURE:-false}
+      COOKIE_SECURE: ${COOKIE_SECURE:-true}
       JAVA_TOOL_OPTIONS: ${JAVA_TOOL_OPTIONS:--Xms256m -Xmx640m -XX:+ExitOnOutOfMemoryError}
       TZ: UTC
     secrets:
@@ -82,10 +85,8 @@ services:
       - type: bind
         source: ${DATA_ROOT:-/data/community}/uploads
         target: /var/lib/community/uploads
-    expose:
-      - "8080"
-    networks:
-      - community
+    expose: ["8080"]
+    networks: [community]
     depends_on:
       mysql:
         condition: service_healthy
@@ -94,26 +95,13 @@ services:
     stop_grace_period: 30s
     read_only: true
     tmpfs:
-      - /tmp:rw,noexec,nosuid,size=64m,uid=10001,gid=10001
-    security_opt:
-      - no-new-privileges:true
-    cap_drop:
-      - ALL
+      - /tmp:rw,noexec,nosuid,nodev,size=64m,uid=10001,gid=10001
+    <<: *default-security
     pids_limit: 256
     mem_limit: 900m
     cpus: 1.0
     healthcheck:
-      test:
-        - CMD
-        - env
-        - -u
-        - JAVA_TOOL_OPTIONS
-        - java
-        - -Xms16m
-        - -Xmx32m
-        - -cp
-        - /app/healthcheck
-        - HealthCheck
+      test: ["CMD", "env", "-u", "JAVA_TOOL_OPTIONS", "java", "-Xms16m", "-Xmx32m", "-cp", "/app/healthcheck", "HealthCheck"]
       interval: 15s
       timeout: 10s
       retries: 8
@@ -121,32 +109,76 @@ services:
     logging: *default-logging
 
   frontend:
-    image: ${FRONTEND_IMAGE:?Set FRONTEND_IMAGE to a commit-tagged image}
-    pull_policy: never
-    ports:
-      - "${HTTP_BIND_ADDRESS:-0.0.0.0}:${HTTP_PORT:-80}:80"
-    networks:
-      - community
-    depends_on:
-      backend:
-        condition: service_healthy
-        restart: true
+    image: ${FRONTEND_IMAGE:?Set FRONTEND_IMAGE to the approved digest reference}
+    platform: linux/amd64
+    pull_policy: ${IMAGE_PULL_POLICY:-always}
+    user: "101:101"
+    expose: ["8080"]
+    networks: [community]
     restart: unless-stopped
     stop_grace_period: 15s
     read_only: true
     tmpfs:
-      - /tmp:rw,noexec,nosuid,size=32m,uid=101,gid=101
-    security_opt:
-      - no-new-privileges:true
-    cap_drop:
-      - ALL
-    cap_add:
-      - NET_BIND_SERVICE
+      - /tmp:rw,noexec,nosuid,nodev,size=32m,uid=101,gid=101
+    <<: *default-security
     pids_limit: 128
     mem_limit: 128m
     cpus: 0.25
     healthcheck:
-      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://127.0.0.1/healthz"]
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://127.0.0.1:8080/healthz"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    logging: *default-logging
+
+  nginx:
+    image: ${NGINX_IMAGE:?Set NGINX_IMAGE to the approved digest reference}
+    platform: linux/amd64
+    pull_policy: ${IMAGE_PULL_POLICY:-always}
+    user: "101:101"
+    group_add: ["20001"]
+    ports:
+      - target: 8080
+        published: "${HTTP_PORT:-80}"
+        host_ip: ${HTTP_BIND_ADDRESS:-0.0.0.0}
+        protocol: tcp
+      - target: 8443
+        published: "${HTTPS_PORT:-443}"
+        host_ip: ${HTTPS_BIND_ADDRESS:-0.0.0.0}
+        protocol: tcp
+    networks: [community]
+    depends_on:
+      backend:
+        condition: service_healthy
+        restart: true
+      frontend:
+        condition: service_healthy
+        restart: true
+    volumes:
+      - type: bind
+        source: ${COMPOSE_ROOT:-/opt/community/deployment/ec2-compose}/nginx/nginx.prod.conf
+        target: /etc/nginx/nginx.conf
+        read_only: true
+      - type: bind
+        source: ${TLS_DIR:-/etc/community/tls}
+        target: /etc/nginx/tls
+        read_only: true
+      - type: bind
+        source: ${ACME_ROOT:-/data/community/acme}
+        target: /var/www/certbot
+        read_only: true
+    restart: unless-stopped
+    stop_grace_period: 15s
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,nodev,size=32m,uid=101,gid=101
+    <<: *default-security
+    pids_limit: 128
+    mem_limit: 96m
+    cpus: 0.25
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://127.0.0.1:8090/healthz"]
       interval: 15s
       timeout: 5s
       retries: 5

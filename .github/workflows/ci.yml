@@ -1,0 +1,189 @@
+name: BE / CI
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened, ready_for_review]
+  merge_group:
+    types: [checks_requested]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: be-ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  source-test:
+    name: BE / source-test
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: gradle/actions/wrapper-validation@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
+      - uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95 # v5.6.0
+        with:
+          distribution: temurin
+          java-version: "21"
+      - uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
+      - name: Test and bootJar
+        run: ./gradlew --no-daemon clean test bootJar
+      - name: Workflow and gate policy tests
+        run: |
+          ./deployment/ec2-compose/scripts/verify-workflows.sh
+          ./deployment/ec2-compose/scripts/test-required-gate.sh
+
+  image-build:
+    name: BE / image-build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: docker/setup-buildx-action@4d04d5d9486b7bd6fa91e7baf45bbb4f8b9deedd # v4.0.0
+      - name: Build linux/amd64 candidate
+        run: |
+          docker buildx build \
+            --platform linux/amd64 \
+            --load \
+            --tag community-backend:${GITHUB_SHA} \
+            --build-arg OCI_REVISION=${GITHUB_SHA} \
+            --build-arg OCI_VERSION=${GITHUB_SHA} \
+            .
+      - name: Verify UID 10001 runtime
+        env:
+          IMAGE_TAG: community-backend:${{ github.sha }}
+        run: ./deployment/ec2-compose/scripts/verify-backend-image.sh
+
+  compose-smoke:
+    name: BE / compose-smoke
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    env:
+      FRONTEND_BOOTSTRAP_SHA: e8540600908fab04b32965608b6de2bb9b6f85b0
+      CI_HTTP_PORT: "18080"
+    steps:
+      - name: Checkout backend candidate
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          path: backend
+      - name: Checkout frontend bootstrap source
+        if: vars.FRONTEND_BASELINE_IMAGE == ''
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          repository: 100-hours-a-week/KTB4-ian-community-FE
+          ref: ${{ vars.FRONTEND_BASELINE_SHA || 'e8540600908fab04b32965608b6de2bb9b6f85b0' }}
+          path: frontend-source
+      - uses: docker/setup-buildx-action@4d04d5d9486b7bd6fa91e7baf45bbb4f8b9deedd # v4.0.0
+      - name: Build candidate backend
+        run: |
+          docker buildx build \
+            --platform linux/amd64 \
+            --load \
+            --tag community-backend:${GITHUB_SHA} \
+            --build-arg OCI_REVISION=${GITHUB_SHA} \
+            --build-arg OCI_VERSION=${GITHUB_SHA} \
+            backend
+      - name: Prepare approved frontend baseline
+        env:
+          APPROVED_IMAGE: ${{ vars.FRONTEND_BASELINE_IMAGE }}
+          APPROVED_SHA: ${{ vars.FRONTEND_BASELINE_SHA }}
+        run: |
+          set -Eeuo pipefail
+          if [[ -n "${APPROVED_IMAGE}" ]]; then
+            [[ "${APPROVED_IMAGE}" =~ ^ghcr\.io/100-hours-a-week/ktb4-ian-community-fe@sha256:[0-9a-f]{64}$ ]]
+            docker pull --platform linux/amd64 "${APPROVED_IMAGE}"
+            docker tag "${APPROVED_IMAGE}" community-frontend:baseline
+          else
+            sha="${APPROVED_SHA:-${FRONTEND_BOOTSTRAP_SHA}}"
+            [[ "${sha}" =~ ^[0-9a-f]{40}$ ]]
+            cp backend/deployment/ec2-compose/bootstrap/frontend.Dockerfile \
+              frontend-source/.bootstrap.Dockerfile
+            cp backend/deployment/ec2-compose/bootstrap/frontend.nginx.conf \
+              frontend-source/.bootstrap-nginx.conf
+            docker buildx build \
+              --platform linux/amd64 \
+              --load \
+              --tag community-frontend:baseline \
+              --build-arg OCI_REVISION=${sha} \
+              --build-arg OCI_VERSION=${sha} \
+              --file frontend-source/.bootstrap.Dockerfile \
+              frontend-source
+          fi
+      - name: Start and verify four-service stack
+        env:
+          APPROVED_FE_SHA: ${{ vars.FRONTEND_BASELINE_SHA }}
+        run: |
+          set -Eeuo pipefail
+          root="${RUNNER_TEMP}/community-be-smoke"
+          compose_root="${GITHUB_WORKSPACE}/backend/deployment/ec2-compose"
+          sudo install -d -o 999 -g 999 -m 0750 "${root}/data/mysql"
+          sudo install -d -o 10001 -g 10001 -m 0750 "${root}/data/uploads"
+          sudo install -d -o root -g 20000 -m 0750 "${root}/secrets"
+          sudo install -d -o root -g root -m 0755 "${root}/acme"
+          printf '%s\n' 'ci-root-password' | sudo tee "${root}/secrets/mysql-root-password" >/dev/null
+          printf '%s\n' 'ci-app-password' | sudo tee "${root}/secrets/mysql-app-password" >/dev/null
+          printf '%s\n' 'Y2ktb25seS1qd3Qtc2VjcmV0LTMyLWJ5dGVzISEhISE=' | sudo tee "${root}/secrets/jwt-secret" >/dev/null
+          sudo chown root:20000 "${root}/secrets/"*
+          sudo chmod 0640 "${root}/secrets/"*
+          fe_sha="${APPROVED_FE_SHA:-${FRONTEND_BOOTSTRAP_SHA}}"
+          cat >"${root}/candidate.env" <<EOF
+          MYSQL_IMAGE=mysql:8.4.11@sha256:1d6b6a8fcee8ff758ff151d017f5203cd06792a0e698f0a593c9dfcb14609cf0
+          NGINX_IMAGE=nginx:1.28.3-alpine3.23@sha256:0dcc88822d45581e65ae329f8be769762bf628d3b2bb7d2a077d4aa5c98b30e3
+          BACKEND_IMAGE=community-backend:${GITHUB_SHA}
+          FRONTEND_IMAGE=community-frontend:baseline
+          BACKEND_COMMIT=${GITHUB_SHA}
+          FRONTEND_COMMIT=${fe_sha}
+          CONFIG_SHA=${GITHUB_SHA}
+          IMAGE_PULL_POLICY=never
+          DATA_ROOT=${root}/data
+          SECRETS_DIR=${root}/secrets
+          TLS_DIR=${root}/tls
+          ACME_ROOT=${root}/acme
+          COMPOSE_ROOT=${compose_root}
+          FRONTEND_ORIGIN=http://127.0.0.1:${CI_HTTP_PORT}
+          COOKIE_SECURE=false
+          CI_HTTP_PORT=${CI_HTTP_PORT}
+          EOF
+          export COMPOSE_PROJECT_NAME=community-be-${GITHUB_RUN_ID}
+          echo "SMOKE_ROOT=${root}" >>"${GITHUB_ENV}"
+          echo "SMOKE_PROJECT=${COMPOSE_PROJECT_NAME}" >>"${GITHUB_ENV}"
+          docker compose --env-file "${root}/candidate.env" \
+            -f "${compose_root}/compose.yaml" -f "${compose_root}/compose.ci.yaml" \
+            up --detach --remove-orphans --wait --wait-timeout 300
+          sudo env PATH="${PATH}" DATA_ROOT="${root}/data" SECRETS_DIR="${root}/secrets" \
+            COMPOSE_ROOT="${compose_root}" COMPOSE_PROJECT_NAME="${COMPOSE_PROJECT_NAME}" \
+            COMPOSE_OVERRIDE_FILE="${compose_root}/compose.ci.yaml" RELEASE_ENV="${root}/candidate.env" \
+            ALLOW_LOCAL_IMAGES=1 ALLOW_HTTP_ORIGIN=1 CI_MODE=1 VERIFY_PERSISTENCE=1 \
+            VERIFY_PUBLIC_URL="http://127.0.0.1:${CI_HTTP_PORT}" \
+            "${compose_root}/scripts/verify.sh"
+      - name: Stack diagnostics
+        if: failure() && env.SMOKE_ROOT != ''
+        run: |
+          docker compose --project-name "${SMOKE_PROJECT}" --env-file "${SMOKE_ROOT}/candidate.env" \
+            -f backend/deployment/ec2-compose/compose.yaml -f backend/deployment/ec2-compose/compose.ci.yaml \
+            ps --all || true
+          docker compose --project-name "${SMOKE_PROJECT}" --env-file "${SMOKE_ROOT}/candidate.env" \
+            -f backend/deployment/ec2-compose/compose.yaml -f backend/deployment/ec2-compose/compose.ci.yaml \
+            logs --no-color --tail 200 || true
+      - name: Stop stack
+        if: always() && env.SMOKE_ROOT != ''
+        run: |
+          docker compose --project-name "${SMOKE_PROJECT}" --env-file "${SMOKE_ROOT}/candidate.env" \
+            -f backend/deployment/ec2-compose/compose.yaml -f backend/deployment/ec2-compose/compose.ci.yaml \
+            down --volumes --remove-orphans
+
+  required-gate:
+    name: BE / required-gate
+    if: always()
+    needs: [source-test, image-build, compose-smoke]
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - run: >-
+          ./deployment/ec2-compose/scripts/required-gate.sh
+          '${{ needs.source-test.result }}'
+          '${{ needs.image-build.result }}'
+          '${{ needs.compose-smoke.result }}'

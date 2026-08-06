@@ -29,6 +29,8 @@ docker buildx build \
   --platform "${platform}" \
   --load \
   --tag "${image_tag}" \
+  --build-arg "OCI_REVISION=$(git -C "${REPOSITORY_ROOT}" rev-parse HEAD)" \
+  --build-arg "OCI_VERSION=$(git -C "${REPOSITORY_ROOT}" rev-parse HEAD)" \
   "${REPOSITORY_ROOT}"
 
 actual_platform="$(

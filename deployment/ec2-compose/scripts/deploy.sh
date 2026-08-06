@@ -10,6 +10,7 @@ require_root
 require_command docker
 require_command install
 require_file "${COMMUNITY_COMPOSE_FILE}"
+acquire_deploy_lock
 
 release_env="${RELEASE_ENV:-${COMMUNITY_COMPOSE_ROOT}/.env}"
 release_manifest="${RELEASE_MANIFEST:-${COMMUNITY_COMPOSE_ROOT}/release-manifest}"
@@ -19,41 +20,43 @@ current_manifest="${COMMUNITY_RELEASE_ROOT}/current.manifest"
 previous_manifest="${COMMUNITY_RELEASE_ROOT}/previous.manifest"
 
 validate_release_env "${release_env}"
+validate_release_manifest "${release_manifest}"
 validate_secret_files
+validate_tls_files
 validate_local_images "${release_env}"
-require_nonempty_file "${release_manifest}"
-
-if grep -Eq \
-  '(PASSWORD|SECRET|PRIVATE_KEY|ACCESS_KEY)=' \
-  "${release_manifest}"; then
-  echo "Release manifests must not contain secrets." >&2
-  exit 1
-fi
-
 compose_cmd "${release_env}" config --quiet
 
-echo "Starting commit-addressed release images."
-if ! compose_cmd "${release_env}" up \
-  --detach \
-  --remove-orphans \
-  --wait \
-  --wait-timeout 240; then
-  compose_cmd "${release_env}" ps || true
-  echo "Deployment failed. current.env was not promoted; inspect service logs." >&2
+reconverge_current() {
+  if [[ -s "${current_env}" ]]; then
+    echo "Candidate failed; reconverging the prior current release." >&2
+    compose_cmd "${current_env}" up --detach --remove-orphans --wait --wait-timeout 300
+    RELEASE_ENV="${current_env}" "${SCRIPT_DIR}/verify.sh"
+    echo "Prior current release is healthy again." >&2
+  else
+    compose_cmd "${release_env}" down --remove-orphans || true
+    echo "No current release exists. Restore the pre-cutover host Nginx manually." >&2
+  fi
+}
+
+echo "Starting the validated candidate digest combination."
+if ! compose_cmd "${release_env}" up --detach --remove-orphans --wait --wait-timeout 300; then
+  compose_cmd "${release_env}" ps --all || true
+  reconverge_current
   exit 1
 fi
 
-if [[ -f "${current_env}" ]]; then
-  install -o root -g root -m 0600 "${current_env}" "${previous_env}"
+if ! RELEASE_ENV="${release_env}" "${SCRIPT_DIR}/verify.sh"; then
+  reconverge_current
+  exit 1
 fi
-if [[ -f "${current_manifest}" ]]; then
-  install -o root -g root -m 0600 \
-    "${current_manifest}" "${previous_manifest}"
+
+if [[ -s "${current_env}" ]]; then
+  atomic_copy "${current_env}" "${previous_env}"
 fi
-install -o root -g root -m 0600 "${release_env}" "${current_env}"
-install -o root -g root -m 0600 \
-  "${release_manifest}" "${current_manifest}"
+if [[ -s "${current_manifest}" ]]; then
+  atomic_copy "${current_manifest}" "${previous_manifest}"
+fi
+atomic_copy "${release_env}" "${current_env}"
+atomic_copy "${release_manifest}" "${current_manifest}"
 
-RELEASE_ENV="${current_env}" "${SCRIPT_DIR}/verify.sh"
-
-echo "Deployment completed and release state was promoted."
+echo "Deployment verified and release state promoted atomically."

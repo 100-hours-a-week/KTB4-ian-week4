@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1.12
 
-ARG JDK_IMAGE=eclipse-temurin:21-jdk-noble@sha256:35685c7e23352983a48882d97cd9875f5284c228db71d1e2476e5e6c1bab1080
-ARG JRE_IMAGE=eclipse-temurin:21-jre-noble@sha256:373787d1d45a87f084fda43e7de0e9acf5eedee049446efac738f13587ec4c64
+ARG JDK_IMAGE=eclipse-temurin:21-jdk-noble@sha256:48e318efd142696fe4bcd0637b0f0619daaadcdc2a61b49956a9f90edd15b1f8
+ARG JRE_IMAGE=eclipse-temurin:21-jre-noble@sha256:59f873f5bb08175e5d089d3656b9c636f448844a4ef93411581a73a8791e4109
 
 FROM ${JDK_IMAGE} AS builder
 
@@ -21,6 +21,14 @@ RUN --mount=type=cache,target=/root/.gradle \
     ./gradlew --no-daemon clean test bootJar
 
 FROM ${JRE_IMAGE} AS runtime
+
+ARG OCI_SOURCE=https://github.com/100-hours-a-week/KTB4-ian-week4
+ARG OCI_REVISION=local
+ARG OCI_VERSION=local
+
+LABEL org.opencontainers.image.source="${OCI_SOURCE}" \
+      org.opencontainers.image.revision="${OCI_REVISION}" \
+      org.opencontainers.image.version="${OCI_VERSION}"
 
 RUN groupadd --gid 10001 community \
     && useradd \
