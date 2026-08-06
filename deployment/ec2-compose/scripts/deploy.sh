@@ -26,12 +26,33 @@ validate_tls_files
 validate_local_images "${release_env}"
 compose_cmd "${release_env}" config --quiet
 
+current_state=none
+if is_registry_release_env "${current_env}"; then
+  current_state=registry
+elif [[ -s "${current_env}" ]]; then
+  current_state=legacy
+fi
+
 reconverge_current() {
-  if [[ -s "${current_env}" ]]; then
+  if [[ "${current_state}" == registry ]]; then
     echo "Candidate failed; reconverging the prior current release." >&2
     compose_cmd "${current_env}" up --detach --remove-orphans --wait --wait-timeout 300
     RELEASE_ENV="${current_env}" "${SCRIPT_DIR}/verify.sh"
     echo "Prior current release is healthy again." >&2
+  elif [[ "${current_state}" == legacy ]]; then
+    local legacy_compose_root
+    legacy_compose_root="$(env_value "${current_env}" LEGACY_COMPOSE_ROOT)"
+    compose_cmd "${release_env}" down --remove-orphans || true
+    [[ -n "${legacy_compose_root}" ]] || {
+      echo "Legacy release state has no preserved LEGACY_COMPOSE_ROOT." >&2
+      echo "Restore the legacy stack and pre-cutover host Nginx manually." >&2
+      return 1
+    }
+    require_file "${legacy_compose_root}/compose.yaml"
+    echo "Candidate failed; reconverging the preserved legacy stack." >&2
+    docker compose --env-file "${current_env}" --file "${legacy_compose_root}/compose.yaml" \
+      up --detach --remove-orphans --wait --wait-timeout 300
+    echo "Legacy stack is healthy again. Restore the pre-cutover host Nginx manually." >&2
   else
     compose_cmd "${release_env}" down --remove-orphans || true
     echo "No current release exists. Restore the pre-cutover host Nginx manually." >&2
@@ -50,11 +71,16 @@ if ! RELEASE_ENV="${release_env}" "${SCRIPT_DIR}/verify.sh"; then
   exit 1
 fi
 
-if [[ -s "${current_env}" ]]; then
+if [[ "${current_state}" == registry ]]; then
   atomic_copy "${current_env}" "${previous_env}"
-fi
-if [[ -s "${current_manifest}" ]]; then
-  atomic_copy "${current_manifest}" "${previous_manifest}"
+  if [[ -s "${current_manifest}" ]]; then
+    atomic_copy "${current_manifest}" "${previous_manifest}"
+  fi
+elif [[ "${current_state}" == legacy ]]; then
+  atomic_copy "${current_env}" "${COMMUNITY_RELEASE_ROOT}/legacy.env"
+  if [[ -s "${current_manifest}" ]]; then
+    atomic_copy "${current_manifest}" "${COMMUNITY_RELEASE_ROOT}/legacy.manifest"
+  fi
 fi
 atomic_copy "${release_env}" "${current_env}"
 atomic_copy "${release_manifest}" "${current_manifest}"

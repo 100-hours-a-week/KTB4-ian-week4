@@ -57,13 +57,16 @@ candidate_manifest="$(mktemp "${COMMUNITY_RELEASE_ROOT}/.candidate-manifest.XXXX
 trap 'rm -f -- "${candidate_env}" "${candidate_manifest}"' EXIT
 current_env="${COMMUNITY_RELEASE_ROOT}/current.env"
 
-if [[ -s "${current_env}" ]]; then
+if is_registry_release_env "${current_env}"; then
   install -o root -g root -m 0600 "${current_env}" "${candidate_env}"
 else
   [[ "${target_component}" == both ]] || {
-    echo "The first deployment requires TARGET_COMPONENT=both with both approved pairs." >&2
+    echo "The first registry deployment requires TARGET_COMPONENT=both with both approved pairs." >&2
     exit 1
   }
+  if [[ -s "${current_env}" ]]; then
+    echo "Legacy release state detected; building a fresh four-service candidate."
+  fi
   production_origin="${PRODUCTION_ORIGIN:?Set PRODUCTION_ORIGIN for the first deployment}"
   cat >"${candidate_env}" <<EOF
 MYSQL_IMAGE=mysql:8.4.11@sha256:1d6b6a8fcee8ff758ff151d017f5203cd06792a0e698f0a593c9dfcb14609cf0

@@ -5,8 +5,13 @@ set -Eeuo pipefail
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 SOURCE_ROOT="$(cd -- "${SCRIPT_DIR}/.." && pwd)"
 target_root="${BOOTSTRAP_COMPOSE_ROOT:-/opt/community/deployment/ec2-compose}"
+source "${SCRIPT_DIR}/common.sh"
 
 [[ "${EUID}" -eq 0 ]] || { echo "This script must be run as root." >&2; exit 1; }
+preserve_legacy_compose \
+  "${target_root}" \
+  "${COMMUNITY_RELEASE_ROOT}/current.env" \
+  "${LEGACY_COMPOSE_ARCHIVE_ROOT:-/opt/community/legacy}"
 install -d -o root -g root -m 0755 "${target_root}" /opt/community/bin
 cp -a "${SOURCE_ROOT}/." "${target_root}/"
 install -o root -g root -m 0755 "${target_root}/scripts/release-runner.sh" /opt/community/bin/community-release

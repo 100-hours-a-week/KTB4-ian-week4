@@ -35,6 +35,10 @@ for file in fullchain.pem privkey.pem; do
 done
 
 current_env="${COMMUNITY_RELEASE_ROOT}/current.env"
+edge_release_active=0
+if is_registry_release_env "${current_env}"; then
+  edge_release_active=1
+fi
 restore_previous_tls() {
   for file in fullchain.pem privkey.pem; do
     if [[ -f "${backup}/${file}" ]]; then
@@ -46,7 +50,7 @@ restore_previous_tls() {
 }
 
 nginx_config_ok() {
-  if [[ -s "${current_env}" ]]; then
+  if [[ "${edge_release_active}" == 1 ]]; then
     compose_root="$(env_value "${current_env}" COMPOSE_ROOT)"
     require_file "${compose_root}/compose.yaml"
     docker compose --env-file "${current_env}" --file "${compose_root}/compose.yaml" exec -T nginx nginx -t
@@ -69,7 +73,7 @@ if ! nginx_config_ok; then
   exit 1
 fi
 
-if [[ -s "${current_env}" ]]; then
+if [[ "${edge_release_active}" == 1 ]]; then
   compose_root="$(env_value "${current_env}" COMPOSE_ROOT)"
   docker compose --env-file "${current_env}" --file "${compose_root}/compose.yaml" exec -T nginx nginx -s reload
 fi
