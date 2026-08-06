@@ -112,6 +112,10 @@ jobs:
               --file frontend-source/.bootstrap.Dockerfile \
               frontend-source
           fi
+      - name: Pull pinned infrastructure images
+        run: |
+          docker pull --platform linux/amd64 mysql:8.4.11@sha256:1d6b6a8fcee8ff758ff151d017f5203cd06792a0e698f0a593c9dfcb14609cf0
+          docker pull --platform linux/amd64 nginx:1.28.3-alpine3.23@sha256:0dcc88822d45581e65ae329f8be769762bf628d3b2bb7d2a077d4aa5c98b30e3
       - name: Start and verify four-service stack
         env:
           APPROVED_FE_SHA: ${{ vars.FRONTEND_BASELINE_SHA }}
