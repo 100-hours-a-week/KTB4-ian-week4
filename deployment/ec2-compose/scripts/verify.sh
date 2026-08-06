@@ -6,178 +6,116 @@ SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 source "${SCRIPT_DIR}/common.sh"
 
 require_root
-require_command curl
-require_command docker
-require_command find
-require_command stat
+for command_name in curl docker find head stat; do require_command "${command_name}"; done
 
 release_env="${RELEASE_ENV:-${COMMUNITY_RELEASE_ROOT}/current.env}"
 validate_release_env "${release_env}"
 validate_secret_files
+if [[ "${CI_MODE:-0}" != "1" ]]; then validate_tls_files; fi
 
 failures=0
+pass() { echo "PASS: $1"; }
+fail() { echo "FAIL: $1" >&2; failures=$((failures + 1)); }
 
-pass() {
-  echo "PASS: $1"
-}
+compose_cmd "${release_env}" config --quiet && pass "Compose configuration" || fail "Compose configuration"
+services="$(compose_cmd "${release_env}" config --services | sort | tr '\n' ' ')"
+[[ "${services}" == "backend frontend mysql nginx " ]] && pass "exact four-service topology" || fail "unexpected services: ${services}"
 
-fail() {
-  echo "FAIL: $1" >&2
-  failures=$((failures + 1))
-}
-
-compose_cmd "${release_env}" config --quiet &&
-  pass "Compose configuration" || fail "Compose configuration"
-
-for service in mysql backend frontend; do
-  container_id="$(compose_cmd "${release_env}" ps --quiet "${service}")"
-  if [[ -z "${container_id}" ]]; then
-    fail "${service} container exists"
-    continue
-  fi
-
+declare -A ids=()
+for service in mysql backend frontend nginx; do
+  ids[${service}]="$(compose_cmd "${release_env}" ps --quiet "${service}")"
+  container_id="${ids[${service}]}"
+  [[ -n "${container_id}" ]] || { fail "${service} container exists"; continue; }
   running="$(docker inspect --format '{{.State.Running}}' "${container_id}")"
   health="$(docker inspect --format '{{if .State.Health}}{{.State.Health.Status}}{{else}}missing{{end}}' "${container_id}")"
-  [[ "${running}" == "true" ]] && pass "${service} is running" || fail "${service} is running"
-  [[ "${health}" == "healthy" ]] && pass "${service} is healthy" || fail "${service} is healthy (${health})"
-
-  privileged="$(docker inspect --format '{{.HostConfig.Privileged}}' "${container_id}")"
-  [[ "${privileged}" == "false" ]] && pass "${service} is not privileged" || fail "${service} is privileged"
-
-  socket_mount="$(
-    docker inspect --format '{{range .Mounts}}{{println .Destination}}{{end}}' \
-      "${container_id}" |
-      grep -Fx '/var/run/docker.sock' || true
-  )"
-  [[ -z "${socket_mount}" ]] && pass "${service} has no Docker socket" || fail "${service} mounts the Docker socket"
-
-  image_id="$(docker inspect --format '{{.Image}}' "${container_id}")"
-  image_platform="$(
-    docker image inspect \
-      --platform linux/amd64 \
-      --format '{{.Os}}/{{.Architecture}}' \
-      "${image_id}"
-  )"
-  [[ "${image_platform}" == "linux/amd64" ]] && pass "${service} image is linux/amd64" || fail "${service} image is ${image_platform}"
+  [[ "${running}" == true ]] && pass "${service} running" || fail "${service} running"
+  [[ "${health}" == healthy ]] && pass "${service} healthy" || fail "${service} healthy (${health})"
+  [[ "$(docker inspect --format '{{.HostConfig.Privileged}}' "${container_id}")" == false ]] && pass "${service} not privileged" || fail "${service} privileged"
+  socket_mount="$(docker inspect --format '{{range .Mounts}}{{println .Destination}}{{end}}' "${container_id}" | grep -Fx /var/run/docker.sock || true)"
+  [[ -z "${socket_mount}" ]] && pass "${service} has no Docker socket" || fail "${service} mounts Docker socket"
+  platform="$(docker image inspect --format '{{.Os}}/{{.Architecture}}' "$(docker inspect --format '{{.Image}}' "${container_id}")")"
+  [[ "${platform}" == linux/amd64 ]] && pass "${service} linux/amd64" || fail "${service} platform ${platform}"
 done
 
-frontend_id="$(compose_cmd "${release_env}" ps --quiet frontend)"
-backend_id="$(compose_cmd "${release_env}" ps --quiet backend)"
-mysql_id="$(compose_cmd "${release_env}" ps --quiet mysql)"
-
-for service_id in "backend:${backend_id}" "mysql:${mysql_id}"; do
-  service="${service_id%%:*}"
-  container_id="${service_id#*:}"
-  port_bindings="$(
-    docker inspect --format '{{json .HostConfig.PortBindings}}' \
-      "${container_id}"
-  )"
-  if [[ "${port_bindings}" == "{}" || "${port_bindings}" == "null" ]]; then
-    pass "${service} has no published host ports"
-  else
-    fail "${service} has published host ports"
-  fi
+for service in mysql backend frontend; do
+  bindings="$(docker inspect --format '{{json .HostConfig.PortBindings}}' "${ids[${service}]}")"
+  [[ "${bindings}" == '{}' || "${bindings}" == null ]] && pass "${service} has no host ports" || fail "${service} publishes host ports"
 done
 
-frontend_bindings="$(
-  docker inspect --format '{{json .HostConfig.PortBindings}}' \
-    "${frontend_id}"
-)"
-if [[ "${frontend_bindings}" == *'"80/tcp"'* ]]; then
-  pass "frontend port 80 is published"
+nginx_bindings="$(docker inspect --format '{{json .HostConfig.PortBindings}}' "${ids[nginx]}")"
+if [[ "${CI_MODE:-0}" == "1" ]]; then
+  [[ "${nginx_bindings}" == *'"8080/tcp"'* && "${nginx_bindings}" != *'"8443/tcp"'* ]] && pass "CI edge exposes loopback HTTP only" || fail "CI edge port policy"
 else
-  fail "frontend port 80 is published"
+  [[ "${nginx_bindings}" == *'"8080/tcp"'* && "${nginx_bindings}" == *'"8443/tcp"'* ]] && pass "edge owns HTTP and HTTPS" || fail "edge port policy"
 fi
 
-for service_id in "frontend:${frontend_id}" "backend:${backend_id}"; do
-  service="${service_id%%:*}"
-  container_id="${service_id#*:}"
-  if [[ -n "${container_id}" ]] &&
-    [[ "$(docker inspect --format '{{.HostConfig.ReadonlyRootfs}}' "${container_id}")" == "true" ]]; then
-    pass "${service} root filesystem is read-only"
-  else
-    fail "${service} root filesystem is read-only"
-  fi
+for service in backend frontend nginx; do
+  container_id="${ids[${service}]}"
+  [[ "$(docker inspect --format '{{.HostConfig.ReadonlyRootfs}}' "${container_id}")" == true ]] && pass "${service} read-only root" || fail "${service} read-only root"
+  [[ "$(docker inspect --format '{{json .HostConfig.CapDrop}}' "${container_id}")" == *'"ALL"'* ]] && pass "${service} drops capabilities" || fail "${service} capabilities"
+  [[ "$(docker inspect --format '{{json .HostConfig.SecurityOpt}}' "${container_id}")" == *'no-new-privileges'* ]] && pass "${service} no-new-privileges" || fail "${service} no-new-privileges"
+  uid="$(compose_cmd "${release_env}" exec -T "${service}" id -u)"
+  [[ "${uid}" != 0 ]] && pass "${service} non-root UID ${uid}" || fail "${service} runs as root"
 done
+[[ "$(compose_cmd "${release_env}" exec -T backend id -u)" == 10001 ]] && pass "backend UID 10001" || fail "backend UID"
+[[ "$(compose_cmd "${release_env}" exec -T frontend id -u)" == 101 ]] && pass "frontend UID 101" || fail "frontend UID"
+compose_cmd "${release_env}" exec -T backend sh -c 'test -w /var/lib/community/uploads' && pass "upload mount writable" || fail "upload mount writable"
+find "${COMMUNITY_DATA_ROOT}/uploads" -perm -0002 -print -quit | grep -q . && fail "world-writable upload path" || pass "uploads not world-writable"
 
-if [[ -n "${frontend_id}" ]] &&
-  [[ "$(docker inspect --format '{{.Config.User}}' "${frontend_id}")" != "0" ]] &&
-  [[ -n "$(docker inspect --format '{{.Config.User}}' "${frontend_id}")" ]]; then
-  pass "frontend runs as a configured non-root user"
+base_url="${VERIFY_PUBLIC_URL:-$(env_value "${release_env}" FRONTEND_ORIGIN)}"
+curl --fail --silent --show-error "${base_url}/healthz" | grep -qx ok && pass "edge health" || fail "edge health"
+curl --fail --silent --show-error "${base_url}/" | grep -q 'id="root"' && pass "React index" || fail "React index"
+curl --fail --silent --show-error "${base_url}/login" | grep -q 'id="root"' && pass "SPA deep link" || fail "SPA deep link"
+curl --fail --silent --show-error --output /dev/null "${base_url}/api/csrf" && pass "API through edge" || fail "API through edge"
+
+asset_headers="$(curl --silent --show-error --dump-header - --output /dev/null "${base_url}/dist/app.js" | tr -d '\r')"
+grep -Eiq '^Cache-Control: .*immutable' <<<"${asset_headers}" && pass "immutable dist cache" || fail "immutable dist cache"
+index_headers="$(curl --silent --show-error --dump-header - --output /dev/null "${base_url}/" | tr -d '\r')"
+grep -Eiq '^Cache-Control: .*no-(store|cache)' <<<"${index_headers}" && pass "index no-cache" || fail "index no-cache"
+if grep -Eiq '^X-Content-Type-Options: nosniff' <<<"${asset_headers}" &&
+  grep -Eiq '^X-Content-Type-Options: nosniff' <<<"${index_headers}"; then
+  pass "security headers"
 else
-  fail "frontend runs as a configured non-root user"
+  fail "security headers"
 fi
 
-if [[ -n "${backend_id}" ]] &&
-  [[ "$(compose_cmd "${release_env}" exec -T backend id -u)" == "10001" ]]; then
-  pass "backend runs as UID 10001"
-else
-  fail "backend runs as UID 10001"
+for blocked in /actuator /h2-console /.env /backup.sql /config.yaml /api/.env; do
+  status="$(curl --silent --show-error --output /dev/null --write-out '%{http_code}' "${base_url}${blocked}")"
+  [[ "${status}" == 404 ]] && pass "blocked ${blocked}" || fail "blocked ${blocked} (${status})"
+done
+body_status="$(head -c 12000000 /dev/zero | curl --silent --show-error --output /dev/null --write-out '%{http_code}' -H 'Content-Type: application/octet-stream' --data-binary @- "${base_url}/api/posts")"
+[[ "${body_status}" == 413 ]] && pass "11MB edge body limit" || fail "11MB edge body limit (${body_status})"
+
+compose_cmd "${release_env}" exec -T mysql sh -ec '
+  export MYSQL_PWD="$(cat /run/secrets/mysql-app-password)"
+  mysql --batch --skip-column-names --user="$MYSQL_USER" --database="$MYSQL_DATABASE" --execute="SELECT 1"
+' | grep -qx 1 && pass "MySQL application connection" || fail "MySQL application connection"
+compose_cmd "${release_env}" exec -T mysql sh -ec '
+  export MYSQL_PWD="$(cat /run/secrets/mysql-app-password)"
+  mysql --batch --skip-column-names --user="$MYSQL_USER" --database="$MYSQL_DATABASE" --execute="SELECT COUNT(*) FROM flyway_schema_history"
+' | grep -Eq '^[1-9][0-9]*$' && pass "Flyway history" || fail "Flyway history"
+
+compose_cmd "${release_env}" exec -T nginx nginx -t >/dev/null && pass "edge nginx configuration" || fail "edge nginx configuration"
+
+if [[ "${VERIFY_PERSISTENCE:-0}" == "1" ]]; then
+  marker="ci-persistence-$(date +%s)-$$"
+  compose_cmd "${release_env}" exec -T backend sh -c "printf '%s' '${marker}' > /var/lib/community/uploads/.ci-persistence-probe"
+  compose_cmd "${release_env}" exec -T --env PERSISTENCE_MARKER="${marker}" mysql sh -ec '
+    export MYSQL_PWD="$(cat /run/secrets/mysql-app-password)"
+    mysql --user="$MYSQL_USER" --database="$MYSQL_DATABASE" --execute="CREATE TABLE IF NOT EXISTS ci_persistence_probe (value VARCHAR(128) PRIMARY KEY); REPLACE INTO ci_persistence_probe VALUES (\"$PERSISTENCE_MARKER\");"
+  '
+  compose_cmd "${release_env}" restart mysql backend
+  compose_cmd "${release_env}" up --detach --wait --wait-timeout 300
+  compose_cmd "${release_env}" exec -T backend grep -qx "${marker}" /var/lib/community/uploads/.ci-persistence-probe && pass "upload restart persistence" || fail "upload restart persistence"
+  compose_cmd "${release_env}" exec -T --env PERSISTENCE_MARKER="${marker}" mysql sh -ec '
+    export MYSQL_PWD="$(cat /run/secrets/mysql-app-password)"
+    mysql --batch --skip-column-names --user="$MYSQL_USER" --database="$MYSQL_DATABASE" --execute="SELECT value FROM ci_persistence_probe WHERE value=\"$PERSISTENCE_MARKER\"; DROP TABLE ci_persistence_probe;"
+  ' | grep -qx "${marker}" && pass "database restart persistence" || fail "database restart persistence"
+  compose_cmd "${release_env}" exec -T backend rm -f /var/lib/community/uploads/.ci-persistence-probe
 fi
 
-if compose_cmd "${release_env}" exec -T backend \
-  sh -c 'test -w /var/lib/community/uploads'; then
-  pass "backend upload bind mount is writable"
-else
-  fail "backend upload bind mount is writable"
-fi
-
-if find "${COMMUNITY_DATA_ROOT}/uploads" -perm -0002 -print -quit |
-  grep -q .; then
-  fail "uploads contain world-writable paths"
-else
-  pass "uploads are not world-writable"
-fi
-
-http_port="$(env_value "${release_env}" HTTP_PORT)"
-http_port="${http_port:-80}"
-base_url="http://127.0.0.1:${http_port}"
-
-if curl --fail --silent --show-error --output /dev/null \
-  "${base_url}/healthz"; then
-  pass "frontend health endpoint"
-else
-  fail "frontend health endpoint"
-fi
-
-if curl --fail --silent --show-error "${base_url}/" |
-  grep -q 'id="root"'; then
-  pass "React index is served"
-else
-  fail "React index is served"
-fi
-
-backend_health="$(
-  compose_cmd "${release_env}" exec -T backend \
-    env -u JAVA_TOOL_OPTIONS java -Xms16m -Xmx32m \
-    -cp /app/healthcheck HealthCheck --body \
-    2>/dev/null || true
-)"
-if [[ "${backend_health}" == *'"status":"UP"'* ]] &&
-  [[ "${backend_health}" != *'"components"'* ]] &&
-  [[ "${backend_health}" != *'"details"'* ]]; then
-  pass "backend health is UP without details"
-else
-  fail "backend health is unavailable or exposes details"
-fi
-
-h2_status="$(
-  compose_cmd "${release_env}" exec -T backend \
-    env -u JAVA_TOOL_OPTIONS java -Xms16m -Xmx32m \
-    -cp /app/healthcheck HealthCheck \
-    --status http://127.0.0.1:8080/h2-console \
-    2>/dev/null || true
-)"
-if [[ "${h2_status}" == "200" || "${h2_status}" == "302" ]]; then
-  fail "H2 Console is disabled"
-else
-  pass "H2 Console is disabled"
-fi
-
-if [[ "${failures}" -ne 0 ]]; then
+[[ "${failures}" -eq 0 ]] || {
   echo "Verification failed: ${failures} control(s)." >&2
   exit 1
-fi
-
-echo "B-method Compose runtime verification passed."
-echo "Check Security Group, EBS encryption, IMDSv2, costs, and EC2 reboot separately."
+}
+echo "Four-service Compose runtime verification passed."

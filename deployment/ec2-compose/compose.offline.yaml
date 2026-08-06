@@ -1,0 +1,9 @@
+services:
+  mysql:
+    pull_policy: never
+  backend:
+    pull_policy: never
+  frontend:
+    pull_policy: never
+  nginx:
+    pull_policy: never

@@ -1,0 +1,250 @@
+name: BE / deploy-production
+
+on:
+  workflow_call:
+    inputs:
+      operation:
+        type: string
+        required: false
+        default: deploy
+      component:
+        type: string
+        required: true
+      source_sha:
+        type: string
+        required: true
+      image_digest:
+        type: string
+        required: true
+  repository_dispatch:
+    types: [frontend-image-published]
+  workflow_dispatch:
+    inputs:
+      operation:
+        description: deploy or rollback
+        type: choice
+        required: true
+        default: deploy
+        options: [deploy, rollback]
+      frontend_sha:
+        description: Full frontend commit SHA (deploy only)
+        type: string
+        required: false
+      frontend_digest:
+        description: Frontend sha256 digest (deploy only)
+        type: string
+        required: false
+      backend_sha:
+        description: Full backend commit SHA (deploy only)
+        type: string
+        required: false
+      backend_digest:
+        description: Backend sha256 digest (deploy only)
+        type: string
+        required: false
+      rollback_confirmation:
+        description: Type rollback-community for rollback
+        type: string
+        required: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pulse-production
+  cancel-in-progress: false
+
+jobs:
+  prepare:
+    runs-on: ubuntu-24.04
+    outputs:
+      operation: ${{ steps.resolve.outputs.operation }}
+      component: ${{ steps.resolve.outputs.component }}
+      config_sha: ${{ steps.resolve.outputs.config_sha }}
+      frontend_commit: ${{ steps.resolve.outputs.frontend_commit }}
+      frontend_image: ${{ steps.resolve.outputs.frontend_image }}
+      backend_commit: ${{ steps.resolve.outputs.backend_commit }}
+      backend_image: ${{ steps.resolve.outputs.backend_image }}
+    steps:
+      - name: Checkout current trusted Backend main
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          ref: main
+          fetch-depth: 1
+          persist-credentials: false
+      - name: Resolve and validate deployment request
+        id: resolve
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          CALL_OPERATION: ${{ inputs.operation }}
+          CALL_COMPONENT: ${{ inputs.component }}
+          CALL_SOURCE_SHA: ${{ inputs.source_sha }}
+          CALL_IMAGE_DIGEST: ${{ inputs.image_digest }}
+          DISPATCH_PAYLOAD: ${{ toJSON(github.event.client_payload) }}
+          MANUAL_OPERATION: ${{ github.event.inputs.operation }}
+          MANUAL_FRONTEND_SHA: ${{ github.event.inputs.frontend_sha }}
+          MANUAL_FRONTEND_DIGEST: ${{ github.event.inputs.frontend_digest }}
+          MANUAL_BACKEND_SHA: ${{ github.event.inputs.backend_sha }}
+          MANUAL_BACKEND_DIGEST: ${{ github.event.inputs.backend_digest }}
+          MANUAL_ROLLBACK_CONFIRMATION: ${{ github.event.inputs.rollback_confirmation }}
+        run: |
+          set -Eeuo pipefail
+          config_sha="$(git rev-parse HEAD)"
+          [[ "${config_sha}" =~ ^[0-9a-f]{40}$ ]]
+
+          operation=''
+          component=''
+          frontend_commit=''
+          frontend_digest=''
+          backend_commit=''
+          backend_digest=''
+
+          case "${EVENT_NAME}" in
+            workflow_call)
+              operation="${CALL_OPERATION}"
+              component="${CALL_COMPONENT}"
+              [[ "${operation}" == deploy ]]
+              [[ "${component}" == backend ]]
+              backend_commit="${CALL_SOURCE_SHA}"
+              backend_digest="${CALL_IMAGE_DIGEST}"
+              [[ "${backend_commit}" == "${config_sha}" ]]
+              ;;
+            repository_dispatch)
+              jq -e 'type == "object" and (keys | sort == ["component","image_digest","source_repository","source_sha"])' <<<"${DISPATCH_PAYLOAD}" >/dev/null
+              operation=deploy
+              component="$(jq -r .component <<<"${DISPATCH_PAYLOAD}")"
+              source_repository="$(jq -r .source_repository <<<"${DISPATCH_PAYLOAD}")"
+              frontend_commit="$(jq -r .source_sha <<<"${DISPATCH_PAYLOAD}")"
+              frontend_digest="$(jq -r .image_digest <<<"${DISPATCH_PAYLOAD}")"
+              [[ "${component}" == frontend ]]
+              [[ "${source_repository}" == 100-hours-a-week/KTB4-ian-community-FE ]]
+              ;;
+            workflow_dispatch)
+              [[ "${GITHUB_REF}" == refs/heads/main ]]
+              operation="${MANUAL_OPERATION}"
+              if [[ "${operation}" == rollback ]]; then
+                [[ "${MANUAL_ROLLBACK_CONFIRMATION}" == rollback-community ]]
+                component=rollback
+              else
+                [[ "${operation}" == deploy ]]
+                component=both
+                frontend_commit="${MANUAL_FRONTEND_SHA}"
+                frontend_digest="${MANUAL_FRONTEND_DIGEST}"
+                backend_commit="${MANUAL_BACKEND_SHA}"
+                backend_digest="${MANUAL_BACKEND_DIGEST}"
+              fi
+              ;;
+            *)
+              echo "Unsupported event: ${EVENT_NAME}" >&2
+              exit 1
+              ;;
+          esac
+
+          if [[ "${operation}" == deploy ]]; then
+            if [[ "${component}" == frontend || "${component}" == both ]]; then
+              [[ "${frontend_commit}" =~ ^[0-9a-f]{40}$ ]]
+              [[ "${frontend_digest}" =~ ^sha256:[0-9a-f]{64}$ ]]
+              frontend_image="ghcr.io/100-hours-a-week/ktb4-ian-community-fe@${frontend_digest}"
+            else
+              frontend_image=''
+            fi
+            if [[ "${component}" == backend || "${component}" == both ]]; then
+              [[ "${backend_commit}" =~ ^[0-9a-f]{40}$ ]]
+              [[ "${backend_digest}" =~ ^sha256:[0-9a-f]{64}$ ]]
+              backend_image="ghcr.io/100-hours-a-week/ktb4-ian-week4-community-backend@${backend_digest}"
+            else
+              backend_image=''
+            fi
+          else
+            frontend_image=''
+            backend_image=''
+          fi
+
+          {
+            echo "operation=${operation}"
+            echo "component=${component}"
+            echo "config_sha=${config_sha}"
+            echo "frontend_commit=${frontend_commit}"
+            echo "frontend_image=${frontend_image}"
+            echo "backend_commit=${backend_commit}"
+            echo "backend_image=${backend_image}"
+          } >>"${GITHUB_OUTPUT}"
+
+  production:
+    needs: prepare
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    permissions:
+      contents: read
+      id-token: write
+    environment:
+      name: production
+      url: https://pulse.gleeze.com
+    steps:
+      - uses: docker/setup-buildx-action@4d04d5d9486b7bd6fa91e7baf45bbb4f8b9deedd # v4.0.0
+      - name: Verify requested public manifests
+        if: needs.prepare.outputs.operation == 'deploy'
+        env:
+          COMPONENT: ${{ needs.prepare.outputs.component }}
+          FRONTEND_IMAGE: ${{ needs.prepare.outputs.frontend_image }}
+          BACKEND_IMAGE: ${{ needs.prepare.outputs.backend_image }}
+        run: |
+          set -Eeuo pipefail
+          if [[ "${COMPONENT}" == frontend || "${COMPONENT}" == both ]]; then
+            docker buildx imagetools inspect "${FRONTEND_IMAGE}" >/dev/null
+          fi
+          if [[ "${COMPONENT}" == backend || "${COMPONENT}" == both ]]; then
+            docker buildx imagetools inspect "${BACKEND_IMAGE}" >/dev/null
+          fi
+      - name: Configure AWS credentials through OIDC
+        uses: aws-actions/configure-aws-credentials@e6de054238d6b7531b4efff3b6587d9aade6a06c # v6.2.3
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_TO_ASSUME }}
+          aws-region: ${{ vars.AWS_REGION }}
+          role-session-name: pulse-production-${{ github.run_id }}
+      - name: Run serialized deployment through SSM
+        env:
+          OPERATION: ${{ needs.prepare.outputs.operation }}
+          COMPONENT: ${{ needs.prepare.outputs.component }}
+          CONFIG_SHA: ${{ needs.prepare.outputs.config_sha }}
+          FRONTEND_COMMIT: ${{ needs.prepare.outputs.frontend_commit }}
+          FRONTEND_IMAGE: ${{ needs.prepare.outputs.frontend_image }}
+          BACKEND_COMMIT: ${{ needs.prepare.outputs.backend_commit }}
+          BACKEND_IMAGE: ${{ needs.prepare.outputs.backend_image }}
+          INSTANCE_ID: ${{ vars.PRODUCTION_INSTANCE_ID }}
+          PRODUCTION_ORIGIN: ${{ vars.PRODUCTION_ORIGIN }}
+        run: |
+          set -Eeuo pipefail
+          [[ "${INSTANCE_ID}" =~ ^i-[0-9a-f]{8,17}$ ]]
+          [[ "${PRODUCTION_ORIGIN}" =~ ^https://[A-Za-z0-9.-]+$ ]]
+
+          if [[ "${OPERATION}" == rollback ]]; then
+            remote_command='sudo env ROLLBACK_CONFIRM=rollback-community /opt/community/bin/community-release rollback'
+          else
+            remote_command="sudo env CONFIG_SHA=${CONFIG_SHA} TARGET_COMPONENT=${COMPONENT} PRODUCTION_ORIGIN=${PRODUCTION_ORIGIN} TARGET_FRONTEND_COMMIT=${FRONTEND_COMMIT} TARGET_FRONTEND_IMAGE=${FRONTEND_IMAGE} TARGET_BACKEND_COMMIT=${BACKEND_COMMIT} TARGET_BACKEND_IMAGE=${BACKEND_IMAGE} /opt/community/bin/community-release deploy"
+          fi
+
+          parameters="$(jq -cn --arg command "${remote_command}" '{commands:[$command]}')"
+          command_id="$(aws ssm send-command \
+            --instance-ids "${INSTANCE_ID}" \
+            --document-name AWS-RunShellScript \
+            --comment "PULSE ${OPERATION} ${CONFIG_SHA}" \
+            --timeout-seconds 1800 \
+            --parameters "${parameters}" \
+            --query 'Command.CommandId' --output text)"
+          [[ "${command_id}" =~ ^[0-9a-f-]{36}$ ]]
+
+          status='Pending'
+          for _ in {1..180}; do
+            status="$(aws ssm get-command-invocation --command-id "${command_id}" --instance-id "${INSTANCE_ID}" --query Status --output text 2>/dev/null || true)"
+            case "${status}" in
+              Success|Cancelled|Failed|TimedOut|Cancelling) break ;;
+            esac
+            sleep 10
+          done
+
+          aws ssm get-command-invocation \
+            --command-id "${command_id}" --instance-id "${INSTANCE_ID}" \
+            --query '{Status:Status,ResponseCode:ResponseCode,Stdout:StandardOutputContent,Stderr:StandardErrorContent}' \
+            --output json
+          [[ "${status}" == Success ]]

@@ -35,3 +35,13 @@ sudo test -s /etc/community/secrets/jwt-secret
 ```
 
 Expected ownership and mode are `root:community-secrets 640`.
+
+## TLS material
+
+TLS termination belongs to the edge Nginx container, but Certbot remains on the
+host. `/etc/community/tls/fullchain.pem` and `privkey.pem` are separate from
+application Secrets and must be `root:community-tls` (`0:20001`) with mode
+`0640`. `certbot-webroot.sh` uses `/data/community/acme` and its deploy hook
+validates expiration and the certificate/key pair before an atomic replacement.
+If the active container rejects the new files with `nginx -t`, the hook restores
+the previous files and does not reload Nginx.

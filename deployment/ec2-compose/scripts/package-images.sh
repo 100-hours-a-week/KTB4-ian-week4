@@ -13,10 +13,12 @@ release_env="${RELEASE_ENV:?Set RELEASE_ENV to the completed Compose environment
 output_dir="${OUTPUT_DIR:-${SCRIPT_DIR}/../artifacts}"
 validate_release_env "${release_env}"
 
-mysql_image="$(env_value "${release_env}" MYSQL_IMAGE)"
-if ! docker image inspect "${mysql_image}" >/dev/null 2>&1; then
-  docker pull --platform linux/amd64 "${mysql_image}"
-fi
+for key in MYSQL_IMAGE NGINX_IMAGE; do
+  image="$(env_value "${release_env}" "${key}")"
+  if ! docker image inspect "${image}" >/dev/null 2>&1; then
+    docker pull --platform linux/amd64 "${image}"
+  fi
+done
 
 validate_local_images "${release_env}"
 mkdir -p "${output_dir}"
@@ -24,7 +26,7 @@ mkdir -p "${output_dir}"
 checksum_manifest="${output_dir}/SHA256SUMS"
 : >"${checksum_manifest}"
 
-for key in FRONTEND_IMAGE BACKEND_IMAGE MYSQL_IMAGE; do
+for key in FRONTEND_IMAGE BACKEND_IMAGE MYSQL_IMAGE NGINX_IMAGE; do
   image="$(env_value "${release_env}" "${key}")"
   archive_name="${image//\//-}"
   archive_name="${archive_name//:/-}.tar"
