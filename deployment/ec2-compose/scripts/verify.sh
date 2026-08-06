@@ -33,7 +33,7 @@ for service in mysql backend frontend nginx; do
   [[ "$(docker inspect --format '{{.HostConfig.Privileged}}' "${container_id}")" == false ]] && pass "${service} not privileged" || fail "${service} privileged"
   socket_mount="$(docker inspect --format '{{range .Mounts}}{{println .Destination}}{{end}}' "${container_id}" | grep -Fx /var/run/docker.sock || true)"
   [[ -z "${socket_mount}" ]] && pass "${service} has no Docker socket" || fail "${service} mounts Docker socket"
-  platform="$(docker image inspect --platform linux/amd64 --format '{{.Os}}/{{.Architecture}}' "$(docker inspect --format '{{.Image}}' "${container_id}")")"
+  platform="$(docker image inspect --format '{{.Os}}/{{.Architecture}}' "$(docker inspect --format '{{.Image}}' "${container_id}")")"
   [[ "${platform}" == linux/amd64 ]] && pass "${service} linux/amd64" || fail "${service} platform ${platform}"
 done
 

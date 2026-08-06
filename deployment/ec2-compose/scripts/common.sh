@@ -240,7 +240,7 @@ validate_local_images() {
       echo "Required local image is missing: ${image}" >&2
       exit 1
     }
-    platform="$(docker image inspect --platform linux/amd64 --format '{{.Os}}/{{.Architecture}}' "${image}")"
+    platform="$(docker image inspect --format '{{.Os}}/{{.Architecture}}' "${image}")"
     [[ "${platform}" == "linux/amd64" ]] || {
       echo "Image ${image} has unsupported platform ${platform}." >&2
       exit 1

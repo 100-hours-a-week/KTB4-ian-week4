@@ -35,7 +35,6 @@ docker buildx build \
 
 actual_platform="$(
   docker image inspect \
-    --platform linux/amd64 \
     --format '{{.Os}}/{{.Architecture}}' \
     "${image_tag}"
 )"

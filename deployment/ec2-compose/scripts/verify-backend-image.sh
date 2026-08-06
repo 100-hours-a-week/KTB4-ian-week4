@@ -5,7 +5,7 @@ set -Eeuo pipefail
 command -v docker >/dev/null 2>&1 || { echo "Docker is required." >&2; exit 1; }
 image="${IMAGE_TAG:?Set IMAGE_TAG to the backend candidate image}"
 
-platform="$(docker image inspect --platform linux/amd64 --format '{{.Os}}/{{.Architecture}}' "${image}")"
+platform="$(docker image inspect --format '{{.Os}}/{{.Architecture}}' "${image}")"
 [[ "${platform}" == linux/amd64 ]] || { echo "Expected linux/amd64, found ${platform}." >&2; exit 1; }
 [[ "$(docker image inspect --format '{{json .Config.ExposedPorts}}' "${image}")" == '{"8080/tcp":{}}' ]] || {
   echo "Backend must expose only 8080." >&2

@@ -126,8 +126,14 @@ jobs:
           printf '%s\n' 'ci-root-password' | sudo tee "${root}/secrets/mysql-root-password" >/dev/null
           printf '%s\n' 'ci-app-password' | sudo tee "${root}/secrets/mysql-app-password" >/dev/null
           printf '%s\n' 'Y2ktb25seS1qd3Qtc2VjcmV0LTMyLWJ5dGVzISEhISE=' | sudo tee "${root}/secrets/jwt-secret" >/dev/null
-          sudo chown root:20000 "${root}/secrets/"*
-          sudo chmod 0640 "${root}/secrets/"*
+          sudo chown root:20000 \
+            "${root}/secrets/mysql-root-password" \
+            "${root}/secrets/mysql-app-password" \
+            "${root}/secrets/jwt-secret"
+          sudo chmod 0640 \
+            "${root}/secrets/mysql-root-password" \
+            "${root}/secrets/mysql-app-password" \
+            "${root}/secrets/jwt-secret"
           fe_sha="${APPROVED_FE_SHA:-${FRONTEND_BOOTSTRAP_SHA}}"
           cat >"${root}/candidate.env" <<EOF
           MYSQL_IMAGE=mysql:8.4.11@sha256:1d6b6a8fcee8ff758ff151d017f5203cd06792a0e698f0a593c9dfcb14609cf0
