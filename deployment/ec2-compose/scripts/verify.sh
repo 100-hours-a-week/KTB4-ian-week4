@@ -72,7 +72,12 @@ asset_headers="$(curl --silent --show-error --dump-header - --output /dev/null "
 grep -Eiq '^Cache-Control: .*immutable' <<<"${asset_headers}" && pass "immutable dist cache" || fail "immutable dist cache"
 index_headers="$(curl --silent --show-error --dump-header - --output /dev/null "${base_url}/" | tr -d '\r')"
 grep -Eiq '^Cache-Control: .*no-(store|cache)' <<<"${index_headers}" && pass "index no-cache" || fail "index no-cache"
-grep -Eiq '^X-Content-Type-Options: nosniff' <<<"${index_headers}" && pass "security headers" || fail "security headers"
+if grep -Eiq '^X-Content-Type-Options: nosniff' <<<"${asset_headers}" &&
+  grep -Eiq '^X-Content-Type-Options: nosniff' <<<"${index_headers}"; then
+  pass "security headers"
+else
+  fail "security headers"
+fi
 
 for blocked in /actuator /h2-console /.env /backup.sql /config.yaml /api/.env; do
   status="$(curl --silent --show-error --output /dev/null --write-out '%{http_code}' "${base_url}${blocked}")"
