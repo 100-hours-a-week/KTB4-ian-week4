@@ -1,71 +1,71 @@
-# Method B 검증 보고서
+# 방식 B 검증 보고서
 
 작성일: 2026-08-04
 
 ## 범위
 
-React와 Spring의 멀티스테이지 Docker Image, MySQL 8.4, Docker Compose
-통합 구성, Frontend Nginx Reverse Proxy를 운영 데이터와 분리된 로컬
-Compose Project에서 검증했다. Apple Silicon Host에서 EC2 대상
-`linux/amd64` Image를 에뮬레이션해 실행했다.
+React와 Spring의 멀티스테이지 Docker 이미지, MySQL 8.4, Docker Compose
+통합 구성, 프론트엔드 Nginx 역방향 프록시를 운영 데이터와 분리된 로컬
+Compose 프로젝트에서 검증했다. Apple Silicon 호스트에서 EC2 대상
+`linux/amd64` 이미지를 에뮬레이션해 실행했다.
 
-검증 Image:
+검증 이미지:
 
-- Backend: `community-backend:a2b2e5a`
-- Frontend: `community-frontend:296b311`
+- 백엔드: `community-backend:a2b2e5a`
+- 프론트엔드: `community-frontend:296b311`
 - MySQL: `mysql:8.4.7`
 
-테스트용 Secret과 데이터는 임시 디렉터리만 사용했으며 검증 후 Container,
-Network, 데이터와 Secret 파일을 삭제했다. 운영 Secret은 사용하거나
+테스트용 비밀값과 데이터는 임시 디렉터리만 사용했으며 검증 후 컨테이너,
+네트워크, 데이터와 비밀값 파일을 삭제했다. 운영 비밀값은 사용하거나
 출력하지 않았다.
 
 ## 결과
 
-| Control | Status | Evidence |
+| 통제 항목 | 상태 | 증빙 |
 |---|---|---|
-| Backend Source Test | PASS | Gradle 57 tests, failures·errors·skipped 0 |
-| Frontend Format | PASS | Prettier 대상 전체 통과 |
-| Frontend Unit Test | PASS | 34 files, 127 tests |
-| Frontend Integration Test | PASS | 10 files, 19 tests |
-| Frontend UI Test | PASS | Playwright 108 tests 중 99개 1차 통과, macOS `ERR_NETWORK_IO_SUSPENDED` 영향 9개를 단일 Worker로 재실행해 전부 통과 |
-| Frontend Production Build | PASS/WARN | Webpack Build 성공, 기존 대용량 Asset 경고 3건 |
-| Backend 멀티스테이지 Build | PASS | JDK builder에서 Test·Boot JAR 생성 후 JRE runtime으로 복사, `linux/amd64` Image 생성 |
-| Frontend 멀티스테이지 Build | PASS | Node builder에서 React Production Build 후 Nginx runtime으로 정적 산출물만 복사 |
-| Frontend Image 단독 검증 | PASS | Non-root, SPA fallback, `/api` Proxy, immutable Asset Cache, runtime Node 부재, `nginx -t` 성공 |
-| Compose 구성 | PASS | `docker compose config --quiet` 성공 |
-| MySQL Container | PASS | running·healthy, UID/GID `999:999`, privileged false, Host Port 미공개 |
-| Backend Container | PASS | running·healthy, UID/GID `10001:10001`, privileged false, read-only root filesystem, Host Port 미공개 |
-| Frontend Container | PASS | running·healthy, User `nginx`, privileged false, read-only root filesystem, 검증용 `127.0.0.1:18088`만 공개 |
-| Image Platform | PASS | Backend·Frontend·MySQL 모두 `linux/amd64` |
-| Upload Mount | PASS | Backend에서 `/var/lib/community/uploads` 쓰기 가능 |
-| Backend Health | PASS | Actuator body `status=UP`, components/details 미노출 |
-| H2 Console | PASS | `/h2-console` 응답 401로 운영 접근 차단 |
-| React 정적 서빙 | PASS | `/` 응답에서 React root 확인 |
-| Nginx Health | PASS | `/healthz` HTTP 200 |
-| Nginx Reverse Proxy | PASS | Frontend `/api/csrf` → Backend HTTP 200 |
-| 재시작 영속성 | PASS | 전체 Compose 재시작 후 임시 MySQL Record와 Upload Marker 유지 |
-| 재시작 후 Health | PASS | 세 Container healthy, Frontend health HTTP 200 |
-| 비정상 재시작 | PASS | 세 Container `RestartCount=0` |
-| Shell·Diff | PASS | 배포 Script `bash -n`, Backend·Frontend `git diff --check` 성공 |
+| 백엔드 소스 테스트 | 통과 | Gradle 57 테스트, 실패·오류·건너뜀 0 |
+| 프론트엔드 형식 | 통과 | Prettier 대상 전체 통과 |
+| 프론트엔드 단위 테스트 | 통과 | 34 파일, 127 테스트 |
+| 프론트엔드 통합 테스트 | 통과 | 10 파일, 19 테스트 |
+| 프론트엔드 UI 테스트 | 통과 | Playwright 108 테스트 중 99개 1차 통과, macOS `ERR_NETWORK_IO_SUSPENDED` 영향 9개를 단일 작업자로 재실행해 전부 통과 |
+| 프론트엔드 운영 빌드 | 통과/경고 | Webpack 빌드 성공, 기존 대용량 자산 경고 3건 |
+| 백엔드 멀티스테이지 빌드 | 통과 | JDK 빌더에서 테스트·Boot JAR 생성 후 JRE 실행 환경으로 복사, `linux/amd64` 이미지 생성 |
+| 프론트엔드 멀티스테이지 빌드 | 통과 | Node 빌더에서 React 운영 빌드 후 Nginx 실행 환경으로 정적 산출물만 복사 |
+| 프론트엔드 이미지 단독 검증 | 통과 | 루트 권한 아님, SPA 대체 경로, `/api` 프록시, 변경 불가 자산 캐시, 실행 환경에 Node 없음, `nginx -t` 성공 |
+| Compose 구성 | 통과 | `docker compose config --quiet` 성공 |
+| MySQL 컨테이너 | 통과 | 실행 중·정상, UID/GID `999:999`, 특권 모드 false, 호스트 포트 미공개 |
+| 백엔드 컨테이너 | 통과 | 실행 중·정상, UID/GID `10001:10001`, 특권 모드 false, 읽기 전용 루트 파일 시스템, 호스트 포트 미공개 |
+| 프론트엔드 컨테이너 | 통과 | 실행 중·정상, 사용자 `nginx`, 특권 모드 false, 읽기 전용 루트 파일 시스템, 검증용 `127.0.0.1:18088`만 공개 |
+| 이미지 플랫폼 | 통과 | 백엔드·프론트엔드·MySQL 모두 `linux/amd64` |
+| 업로드 마운트 | 통과 | 백엔드에서 `/var/lib/community/uploads` 쓰기 가능 |
+| 백엔드 상태 확인 | 통과 | Actuator 본문 `status=UP`, `components`/`details` 미노출 |
+| H2 콘솔 | 통과 | `/h2-console` 응답 401로 운영 접근 차단 |
+| React 정적 서빙 | 통과 | `/` 응답에서 React 루트 확인 |
+| Nginx 상태 확인 | 통과 | `/healthz` HTTP 200 |
+| Nginx 역방향 프록시 | 통과 | 프론트엔드 `/api/csrf` → 백엔드 HTTP 200 |
+| 재시작 영속성 | 통과 | 전체 Compose 재시작 후 임시 MySQL 레코드와 업로드 표식 유지 |
+| 재시작 후 상태 확인 | 통과 | 세 컨테이너 정상, 프론트엔드 상태 확인 HTTP 200 |
+| 비정상 재시작 | 통과 | 세 컨테이너 `RestartCount=0` |
+| 셸·차이 검사 | 통과 | 배포 스크립트 `bash -n`, 백엔드·프론트엔드 `git diff --check` 성공 |
 
-검증 시점 Resource Snapshot:
+검증 시점 자원 현황:
 
-| Service | Memory | Limit | Usage |
+| 서비스 | 메모리 | 제한 | 사용률 |
 |---|---:|---:|---:|
 | MySQL | 311.6 MiB | 640 MiB | 48.68% |
-| Backend | 537.4 MiB | 900 MiB | 59.71% |
-| Frontend | 17.7 MiB | 128 MiB | 13.82% |
+| 백엔드 | 537.4 MiB | 900 MiB | 59.71% |
+| 프론트엔드 | 17.7 MiB | 128 MiB | 13.82% |
 
 이 수치는 Apple Silicon의 amd64 에뮬레이션 환경에서 한 번 측정한
-Snapshot이므로 EC2 성능 결론으로 사용하지 않는다. 실제 EC2에서는 B 방식
-Frontend Container가 port 80에서 healthy인 상태까지 확인한 뒤 A 방식 Host
-Nginx로 전환하기 위해 `restart=no`로 중지했다. A와 B가 동일 Host port 80을
+스냅샷이므로 EC2 성능 결론으로 사용하지 않는다. 실제 EC2에서는 B 방식
+프론트엔드 컨테이너가 포트 80에서 정상인 상태까지 확인한 뒤 A 방식 호스트
+Nginx로 전환하기 위해 `restart=no`로 중지했다. A와 B가 동일 호스트 포트 80을
 동시에 점유할 수 없으므로 현재 공개 서비스는 A 방식이다.
 
 ## 제출 판정
 
-B 방식 Source 요구사항인 React·Spring 멀티스테이지 Dockerfile, 세 Service
-Compose 통합, Nginx Reverse Proxy와 런타임 격리·Health·Persistence 검증은
-PASS다. B 방식의 별도 공개 URL을 동시에 요구하는 과제라면 추가 EC2 또는
-별도 Port/Domain 구성이 필요하지만, 구성과 재현 가능한 실행 증빙에는
+B 방식 소스 요구사항인 React·Spring 멀티스테이지 Dockerfile, 세 서비스
+Compose 통합, Nginx 역방향 프록시와 실행 환경 격리·상태 확인·영속성 검증은
+통과했다. B 방식의 별도 공개 URL을 동시에 요구하는 과제라면 추가 EC2 또는
+별도 포트/도메인 구성이 필요하지만, 구성과 재현 가능한 실행 증빙에는
 영향이 없다.

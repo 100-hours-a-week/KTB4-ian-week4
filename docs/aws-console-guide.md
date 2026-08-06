@@ -1,100 +1,94 @@
-# AWS Console guide for the B method
+# B 방식 AWS 콘솔 안내서
 
-Codex does not perform these actions. The AWS account owner must review costs and
-security, click every Console control, run every Session Manager command, and
-report only masked, non-secret results.
+Codex는 다음 작업을 수행하지 않습니다. AWS 계정 소유자가 비용과 보안을 검토하고,
+모든 콘솔 조작을 직접 수행하며, 모든 세션 관리자 명령을 실행해야 합니다. 보고할 때는
+마스킹된 비밀값이 아닌 결과만 공유합니다.
 
-## Budget
+## 예산
 
-[AWS Console work required]
+[AWS 콘솔 작업 필요]
 
-Current step: Create a monthly cost budget before compute resources.
+현재 단계: 컴퓨팅 자원을 만들기 전에 월간 비용 예산을 생성합니다.
 
-Purpose: Alert before the target monthly spend is exceeded.
+목적: 목표 월간 지출을 초과하기 전에 알림을 받습니다.
 
-Console path: Billing and Cost Management → Budgets → Create budget.
+콘솔 경로: 결제 및 비용 관리 → 예산 → 예산 생성.
 
-Input values: Cost budget, monthly recurring, USD 12. Add account-owner email
-alerts at suitable thresholds such as 80% and 100%. The hard project ceiling is
-USD 15; a Budget alerts but does not stop resources.
+입력값: 비용 예산, 매월 반복, 12달러. 80%와 100% 같은 적절한 임계값에 계정 소유자
+이메일 알림을 추가합니다. 프로젝트의 절대 상한은 15달러입니다. 예산 기능은 알림만
+제공하며 자원을 자동으로 중지하지 않습니다.
 
-Cost impact: Creating the basic budget does not replace manual cost review.
+비용 영향: 기본 예산을 생성해도 수동 비용 검토를 대신할 수 없습니다.
 
-Completion check: Budget status is active and the notification recipient is
-verified.
+완료 확인: 예산 상태가 활성이고 알림 수신자가 확인되었습니다.
 
-## Session Manager instance role
+## 세션 관리자 인스턴스 역할
 
-[AWS Console work required]
+[AWS 콘솔 작업 필요]
 
-Current step: Create or select an EC2 instance profile for Session Manager.
+현재 단계: 세션 관리자용 EC2 인스턴스 프로필을 생성하거나 선택합니다.
 
-Purpose: Operate the instance without opening inbound SSH.
+목적: 인바운드 SSH를 열지 않고 인스턴스를 운영합니다.
 
-Console path: IAM → Roles → Create role → AWS service → EC2.
+콘솔 경로: IAM → 역할 → 역할 생성 → AWS 서비스 → EC2.
 
-Input values: Attach `AmazonSSMManagedInstanceCore`; use a project-specific role
-name. Do not attach administrator or broad application-data permissions.
+입력값: `AmazonSSMManagedInstanceCore`를 연결하고 프로젝트 전용 역할 이름을 사용합니다.
+관리자 권한이나 광범위한 애플리케이션 데이터 권한은 연결하지 않습니다.
 
-Security note: No AWS access key is stored on the instance or in this repository.
+보안 참고: AWS 접근 키를 인스턴스나 이 저장소에 저장하지 않습니다.
 
-Completion check: The role's trusted service is EC2 and only the reviewed
-policies are attached.
+완료 확인: 역할의 신뢰 서비스가 EC2이고 검토한 정책만 연결되어 있습니다.
 
-## EC2 instance
+## EC2 인스턴스
 
-[AWS Console work required]
+[AWS 콘솔 작업 필요]
 
-Current step: Launch the single Compose host.
+현재 단계: 단일 Compose 호스트를 시작합니다.
 
-Purpose: Run frontend, backend, and MySQL containers on one low-cost host.
+목적: 하나의 저비용 호스트에서 프론트엔드, 백엔드 및 MySQL 컨테이너를 실행합니다.
 
-Console path: EC2 → Instances → Launch instances.
+콘솔 경로: EC2 → 인스턴스 → 인스턴스 시작.
 
-Input values:
+입력값:
 
-- Region: Seoul (`ap-northeast-2`)
-- AMI: Ubuntu Server 24.04 LTS, x86_64
-- Instance type: `t3a.small`
-- Key pair: proceed without one when Session Manager is the approved access path
-- Instance profile: the reviewed Session Manager role
-- Root volume: gp3, 20 GiB, encryption enabled, delete on termination only after
-  backup/retention implications are accepted
-- Metadata options: IMDSv2 required; response hop limit 1 unless a reviewed
-  container use case requires otherwise
-- Detailed monitoring: leave disabled unless its additional cost is accepted
+- 리전: 서울(`ap-northeast-2`)
+- AMI: Ubuntu 서버 24.04 LTS, x86_64
+- 인스턴스 유형: `t3a.small`
+- 키 페어: 세션 관리자가 승인된 접근 경로라면 키 페어 없이 진행
+- 인스턴스 프로필: 검토한 세션 관리자 역할
+- 루트 볼륨: gp3, 20 GiB, 암호화 활성화. 종료 시 삭제는 백업·보존 영향을 수용한 뒤에만 선택
+- 메타데이터 옵션: IMDSv2 필수. 검토된 컨테이너 사용 사례가 없다면 응답 홉 제한은 1
+- 세부 모니터링: 추가 비용을 수용하지 않았다면 비활성화 유지
 
-Cost impact: EC2 compute and EBS are the main recurring charges. Public IPv4 may
-also be billed even without an Elastic IP. Stopped instances retain EBS charges.
+비용 영향: EC2 컴퓨팅과 EBS가 주요 반복 비용입니다. 탄력적 IP가 없어도 공개 IPv4에는
+비용이 부과될 수 있습니다. 중지된 인스턴스도 EBS 비용은 계속 발생합니다.
 
-Completion check: Instance state is running, architecture is x86_64, the root
-volume is encrypted, and Session Manager reports the node online.
+완료 확인: 인스턴스가 실행 중이고 아키텍처는 x86_64이며, 루트 볼륨은 암호화되어 있고
+세션 관리자에서 노드가 온라인으로 표시됩니다.
 
-## Security Group
+## 보안 그룹
 
-[AWS Console work required]
+[AWS 콘솔 작업 필요]
 
-Current step: Restrict public ingress to Nginx.
+현재 단계: 공개 인바운드를 Nginx로 제한합니다.
 
-Purpose: Keep Spring Boot and MySQL private to the Compose network.
+목적: Spring Boot와 MySQL을 Compose 네트워크 안에서만 접근 가능하게 유지합니다.
 
-Console path: EC2 → Security Groups → select the instance group → Edit inbound
-rules.
+콘솔 경로: EC2 → 보안 그룹 → 인스턴스의 그룹 선택 → 인바운드 규칙 편집.
 
-Input values: Allow TCP 80 from the intended audience for initial HTTP operation.
-If HTTPS is separately configured with a domain and certificate, allow TCP 443.
-Do not add inbound 22, 8080, or 3306. Restrict outbound rules further only after
-confirming SSM, package, image, DNS, and time-sync dependencies.
+입력값: 초기 HTTP 운영을 위해 의도한 사용자 범위에서 TCP 80을 허용합니다. 도메인과
+인증서로 HTTPS를 별도 설정했다면 TCP 443을 허용합니다. 인바운드 22, 8080 또는
+3306은 추가하지 않습니다. SSM, 패키지, 이미지, DNS 및 시간 동기화 의존성을 확인한
+후에만 아웃바운드 규칙을 더 제한합니다.
 
-Completion check: The effective rules have no inbound 22/8080/3306 and match the
-chosen HTTP/HTTPS exposure.
+완료 확인: 적용된 규칙에 인바운드 22/8080/3306이 없고 선택한 HTTP/HTTPS 공개 범위와
+일치합니다.
 
-## Session Manager handoff
+## 세션 관리자 인계
 
-Console path: EC2 → Instances → select instance → Connect → Session Manager →
-Connect.
+콘솔 경로: EC2 → 인스턴스 → 인스턴스 선택 → 연결 → 세션 관리자 → 연결.
 
-Run the preflight before installation:
+설치 전에 사전 점검을 실행합니다.
 
 ```bash
 uname -a
@@ -104,8 +98,8 @@ free -h
 df -h /
 ```
 
-Proceed only when Ubuntu is 24.04, architecture is `amd64`, memory is about 2
-GiB, and the root filesystem has sufficient free space. Then follow
-`deployment/ec2-compose/README.md`. Share only versions, status, masked image
-tags, HTTP status codes, and PASS/WARN/FAIL results—never secret values or full
-inspection output.
+Ubuntu가 24.04이고 아키텍처가 `amd64`이며 메모리가 약 2 GiB이고 루트 파일 시스템에
+충분한 여유 공간이 있을 때만 진행합니다. 그런 다음
+`deployment/ec2-compose/README.md`를 따릅니다. 버전, 상태, 마스킹한 이미지 태그,
+HTTP 상태 코드 및 통과·경고·실패 결과만 공유합니다. 비밀값이나 전체 검사 출력은 절대
+공유하지 않습니다.

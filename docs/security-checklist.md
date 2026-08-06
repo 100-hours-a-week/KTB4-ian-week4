@@ -1,43 +1,41 @@
-# B-method security checklist
+# B 방식 보안 점검표
 
-Record each control as PASS, WARN, or FAIL for every release.
+모든 릴리스에서 각 통제 항목을 통과, 경고 또는 실패로 기록합니다.
 
-## Image and secret controls
+## 이미지 및 비밀값 통제
 
-- Dockerfiles contain no credentials or secret build arguments.
-- Frontend `dist` contains no credentials, server secrets, or source maps.
-- Application images use commit-addressed tags; `latest` is rejected.
-- All loaded images report `linux/amd64`.
-- Backend and frontend runtime users are non-root.
-- `/etc/community/secrets/*` is `root:community-secrets 0640` and non-empty.
-- Compose environment and release manifest contain no secret values.
-- Dumps, archives, `.env`, private evidence, and keys are not Git-tracked.
+- Dockerfile에 자격 증명이나 비밀 빌드 인수가 없습니다.
+- 프론트엔드 `dist`에 자격 증명, 서버 비밀값 또는 소스 맵이 없습니다.
+- 애플리케이션 이미지는 커밋 기반 태그를 사용하며 `latest`는 허용하지 않습니다.
+- 불러온 모든 이미지가 `linux/amd64`로 표시됩니다.
+- 백엔드와 프론트엔드 실행 사용자는 루트 권한을 사용하지 않습니다.
+- `/etc/community/secrets/*`는 `root:community-secrets 0640`이며 비어 있지 않습니다.
+- Compose 환경 파일과 릴리스 명세에 비밀값이 없습니다.
+- 덤프, 압축 파일, `.env`, 비공개 증빙 및 키를 Git에서 추적하지 않습니다.
 
-## Runtime controls
+## 실행 환경 통제
 
-- Only frontend port 80 is published; 8080 and 3306 have no host mapping.
-- No service is privileged, uses host networking, or mounts the Docker socket.
-- `no-new-privileges` and capability drops are applied.
-- Frontend and backend root filesystems are read-only.
-- Backend H2 Console is disabled and health details are hidden.
-- MySQL application traffic uses the application user, not root.
-- Upload and MySQL bind mounts are not world-writable; no `777` paths exist.
-- JSON logs rotate and access logs do not include Authorization, Cookie, JWT, or
-  request bodies.
+- 프론트엔드 포트 80만 공개하며 8080과 3306에는 호스트 매핑이 없습니다.
+- 어떤 서비스도 특권 모드, 호스트 네트워크 또는 Docker 소켓 마운트를 사용하지 않습니다.
+- `no-new-privileges`와 기능 권한 제거를 적용합니다.
+- 프론트엔드와 백엔드의 루트 파일 시스템은 읽기 전용입니다.
+- 백엔드 H2 콘솔은 비활성화하며 상태 상세 정보는 숨깁니다.
+- MySQL 애플리케이션 통신은 루트가 아닌 애플리케이션 사용자를 사용합니다.
+- 업로드 및 MySQL 바인드 마운트는 모든 사용자에게 쓰기 가능하지 않으며 `777` 경로가 없습니다.
+- JSON 로그는 순환되며 접근 로그에 `Authorization`, `Cookie`, `JWT` 또는 요청 본문을 포함하지 않습니다.
 
-Any credential in an image/configuration, privileged container, Docker socket
-mount, host-published 8080/3306, application root DB usage, public H2 Console,
-world-writable upload path, Git-tracked dump, or frontend-bundled secret is an
-immediate FAIL and blocks deployment.
+이미지나 설정의 자격 증명, 특권 컨테이너, Docker 소켓 마운트, 호스트에 공개된
+8080/3306, 애플리케이션의 루트 DB 사용, 공개 H2 콘솔, 모든 사용자에게 쓰기 가능한
+업로드 경로, Git에서 추적하는 덤프 또는 프론트엔드 번들에 포함된 비밀값이 하나라도
+있으면 즉시 실패로 판정하고 배포를 차단합니다.
 
-## AWS evidence controls
+## AWS 증빙 통제
 
-- Region is `ap-northeast-2`; instance type is `t3a.small` on Ubuntu 24.04 amd64.
-- Root EBS is encrypted gp3 20 GiB.
-- IMDSv2 is required.
-- Session Manager works through an instance role; inbound SSH/22 is absent.
-- Security Group exposes only the chosen public HTTP/HTTPS ports.
-- No RDS, S3, Elastic IP, ALB, or NAT Gateway was added for this design.
-- A $12 monthly AWS Budget is active; expected spend is reviewed against the $15
-  ceiling.
-- EC2 reboot, container recreation, backup/restore, and rollback evidence exists.
+- 리전은 `ap-northeast-2`이며 인스턴스는 Ubuntu 24.04 amd64의 `t3a.small`입니다.
+- 루트 EBS는 암호화된 gp3 20 GiB입니다.
+- IMDSv2를 필수로 사용합니다.
+- 세션 관리자는 인스턴스 역할을 통해 동작하며 인바운드 SSH/22는 없습니다.
+- 보안 그룹은 선택한 공개 HTTP/HTTPS 포트만 노출합니다.
+- 이 설계에는 RDS, S3, 탄력적 IP, ALB 또는 NAT 게이트웨이를 추가하지 않았습니다.
+- 월 12달러 AWS 예산이 활성화되어 있으며 예상 비용을 15달러 상한과 비교해 검토합니다.
+- EC2 재부팅, 컨테이너 재생성, 백업·복원 및 롤백 증빙이 존재합니다.
